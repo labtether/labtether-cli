@@ -1,0 +1,99 @@
+package cmd
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/spf13/cobra"
+)
+
+var execCmd = &cobra.Command{
+	Use:   "exec <asset> <command>",
+	Short: "Run a command on an asset",
+	Long:  "Execute a shell command on a managed asset. Use --targets for multi-asset execution.",
+	Args:  cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := newClient()
+		if err != nil {
+			return err
+		}
+
+		targets, _ := cmd.Flags().GetString("targets")
+		group, _ := cmd.Flags().GetString("group")
+		timeout, _ := cmd.Flags().GetInt("timeout")
+
+		if targets != "" || group != "" {
+			// Multi-target exec
+			command := strings.Join(args, " ")
+			body := map[string]any{
+				"command": command,
+				"timeout": timeout,
+			}
+			if targets != "" {
+				body["targets"] = strings.Split(targets, ",")
+			}
+			if group != "" {
+				body["group"] = group
+			}
+
+			resp, err := c.Post("/api/v2/exec", body)
+			if err != nil {
+				return err
+			}
+
+			if jsonOutput {
+				printJSON(json.RawMessage(resp.Data))
+				return nil
+			}
+
+			var data map[string]any
+			json.Unmarshal(resp.Data, &data)
+
+			results, _ := data["results"].(map[string]any)
+			for target, res := range results {
+				result := res.(map[string]any)
+				if errMsg, ok := result["error"]; ok {
+					fmt.Printf("[%s] Error: %v\n", target, errMsg)
+				} else {
+					fmt.Printf("[%s] %v\n", target, result["stdout"])
+				}
+			}
+			return nil
+		}
+
+		// Single-target exec
+		if len(args) < 2 {
+			return fmt.Errorf("usage: labtether-cli exec <asset> <command>")
+		}
+		assetID := args[0]
+		command := strings.Join(args[1:], " ")
+
+		resp, err := c.Post("/api/v2/assets/"+assetID+"/exec", map[string]any{
+			"command": command,
+			"timeout": timeout,
+		})
+		if err != nil {
+			return err
+		}
+
+		if jsonOutput {
+			printJSON(json.RawMessage(resp.Data))
+			return nil
+		}
+
+		var data map[string]any
+		json.Unmarshal(resp.Data, &data)
+		if output, ok := data["stdout"].(string); ok && output != "" {
+			fmt.Println(output)
+		}
+		return nil
+	},
+}
+
+func init() {
+	execCmd.Flags().String("targets", "", "Comma-separated list of asset IDs for multi-target exec")
+	execCmd.Flags().String("group", "", "Group name for multi-target exec")
+	execCmd.Flags().Int("timeout", 30, "Command timeout in seconds (max 300)")
+	rootCmd.AddCommand(execCmd)
+}
