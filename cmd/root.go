@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -28,8 +29,35 @@ var rootCmd = &cobra.Command{
 	Long:  "labtether-cli is a command-line interface for the LabTether hub API. It lets you manage assets, run commands, manage files, and control your entire homelab.",
 }
 
-func Execute() error {
-	return rootCmd.Execute()
+func Execute() int {
+	if err := rootCmd.Execute(); err != nil {
+		// Determine exit code based on error
+		errStr := err.Error()
+		switch {
+		case strings.Contains(errStr, "status 401") || strings.Contains(errStr, "status 403"):
+			return 2 // auth error
+		case strings.Contains(errStr, "status 409") || strings.Contains(errStr, "not found"):
+			return 3 // asset offline or not found
+		case strings.Contains(errStr, "not configured"):
+			return 4 // CLI usage error
+		default:
+			return 1 // general error
+		}
+	}
+	return 0
+}
+
+func outputResult(resp *client.V2Response, err error) error {
+	if err != nil {
+		if jsonOutput {
+			printJSON(map[string]string{"error": err.Error()})
+		}
+		return err
+	}
+	if jsonOutput {
+		printJSON(json.RawMessage(resp.Data))
+	}
+	return nil
 }
 
 func init() {
