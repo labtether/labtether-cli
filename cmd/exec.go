@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -12,16 +13,23 @@ var execCmd = &cobra.Command{
 	Use:   "exec <asset> <command>",
 	Short: "Run a command on an asset",
 	Long:  "Execute a shell command on a managed asset. Use --targets for multi-asset execution.",
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		targets, _ := cmd.Flags().GetString("targets")
+		group, _ := cmd.Flags().GetString("group")
+		timeout, _ := cmd.Flags().GetInt("timeout")
+
+		if targets == "" && group == "" && len(args) < 2 {
+			return fmt.Errorf("usage: labtether-cli exec <asset> <command>\n  or:  labtether-cli exec --targets a,b,c <command>\n  or:  labtether-cli exec --group <name> <command>")
+		}
+		if (targets != "" || group != "") && len(args) < 1 {
+			return fmt.Errorf("command is required")
+		}
+
 		c, err := newClient()
 		if err != nil {
 			return err
 		}
-
-		targets, _ := cmd.Flags().GetString("targets")
-		group, _ := cmd.Flags().GetString("group")
-		timeout, _ := cmd.Flags().GetInt("timeout")
 
 		if targets != "" || group != "" {
 			// Multi-target exec
@@ -48,11 +56,17 @@ var execCmd = &cobra.Command{
 			}
 
 			var data map[string]any
-			json.Unmarshal(resp.Data, &data)
+			if err := json.Unmarshal(resp.Data, &data); err != nil {
+				return fmt.Errorf("failed to parse response: %w", err)
+			}
 
 			results, _ := data["results"].(map[string]any)
 			for target, res := range results {
-				result := res.(map[string]any)
+				result, ok := res.(map[string]any)
+				if !ok {
+					fmt.Printf("[%s] unexpected response format\n", target)
+					continue
+				}
 				if errMsg, ok := result["error"]; ok {
 					fmt.Printf("[%s] Error: %v\n", target, errMsg)
 				} else {
@@ -63,9 +77,6 @@ var execCmd = &cobra.Command{
 		}
 
 		// Single-target exec
-		if len(args) < 2 {
-			return fmt.Errorf("usage: labtether-cli exec <asset> <command>")
-		}
 		assetID := args[0]
 		command := strings.Join(args[1:], " ")
 
@@ -83,9 +94,14 @@ var execCmd = &cobra.Command{
 		}
 
 		var data map[string]any
-		json.Unmarshal(resp.Data, &data)
+		if err := json.Unmarshal(resp.Data, &data); err != nil {
+			return fmt.Errorf("failed to parse response: %w", err)
+		}
 		if output, ok := data["stdout"].(string); ok && output != "" {
 			fmt.Println(output)
+		}
+		if exitCode, ok := data["exit_code"].(float64); ok && exitCode != 0 {
+			fmt.Fprintf(os.Stderr, "Exit code: %d\n", int(exitCode))
 		}
 		return nil
 	},

@@ -46,9 +46,27 @@ var configShowCmd = &cobra.Command{
 	Short: "Show current configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := loadConfig()
+
+		// Mask the API key consistently
+		masked := ""
+		if len(cfg.APIKey) >= 10 {
+			masked = cfg.APIKey[:6] + "..." + cfg.APIKey[len(cfg.APIKey)-4:]
+		} else if cfg.APIKey != "" {
+			masked = "(set)"
+		}
+
+		if jsonOutput {
+			printJSON(map[string]any{
+				"host":    cfg.Host,
+				"api_key": masked,
+				"config":  configPath(),
+			})
+			return nil
+		}
+
 		fmt.Printf("Host:    %s\n", cfg.Host)
 		if cfg.APIKey != "" {
-			fmt.Printf("API Key: %s...%s\n", cfg.APIKey[:6], cfg.APIKey[len(cfg.APIKey)-4:])
+			fmt.Printf("API Key: %s\n", masked)
 		} else {
 			fmt.Println("API Key: (not set)")
 		}

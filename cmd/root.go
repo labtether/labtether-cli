@@ -34,9 +34,9 @@ func Execute() int {
 		// Determine exit code based on error
 		errStr := err.Error()
 		switch {
-		case strings.Contains(errStr, "status 401") || strings.Contains(errStr, "status 403"):
+		case strings.Contains(errStr, "(status 401)") || strings.Contains(errStr, "(status 403)"):
 			return 2 // auth error
-		case strings.Contains(errStr, "status 409") || strings.Contains(errStr, "not found"):
+		case strings.Contains(errStr, "(status 409)") || strings.Contains(errStr, "(status 404)"):
 			return 3 // asset offline or not found
 		case strings.Contains(errStr, "not configured"):
 			return 4 // CLI usage error
@@ -67,10 +67,14 @@ func init() {
 }
 
 func newClient() (*client.Client, error) {
-	host := cfgHost
-	key := cfgAPIKey
+	// Priority: flag > env > config file
 
-	// Env vars override flags
+	// Config file (lowest priority)
+	cfg := loadConfig()
+	host := cfg.Host
+	key := cfg.APIKey
+
+	// Env vars override config
 	if v := os.Getenv("LABTETHER_HOST"); v != "" {
 		host = v
 	}
@@ -78,15 +82,12 @@ func newClient() (*client.Client, error) {
 		key = v
 	}
 
-	// Config file as fallback
-	if host == "" || key == "" {
-		cfg := loadConfig()
-		if host == "" {
-			host = cfg.Host
-		}
-		if key == "" {
-			key = cfg.APIKey
-		}
+	// Flags override everything
+	if cfgHost != "" {
+		host = cfgHost
+	}
+	if cfgAPIKey != "" {
+		key = cfgAPIKey
 	}
 
 	if host == "" {
@@ -96,11 +97,18 @@ func newClient() (*client.Client, error) {
 		return nil, fmt.Errorf("api key not configured -- run: labtether-cli config set-key <key>")
 	}
 
+	if strings.HasPrefix(host, "http://") {
+		fmt.Fprintln(os.Stderr, "Warning: connecting over unencrypted HTTP — API key will be sent in cleartext")
+	}
+
 	return client.New(host, key), nil
 }
 
 func configDir() string {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return filepath.Join(os.TempDir(), "labtether")
+	}
 	return filepath.Join(home, ".config", "labtether")
 }
 

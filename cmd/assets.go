@@ -37,7 +37,9 @@ var assetsListCmd = &cobra.Command{
 		}
 
 		var assets []map[string]any
-		json.Unmarshal(resp.Data, &assets)
+		if err := json.Unmarshal(resp.Data, &assets); err != nil {
+			return fmt.Errorf("failed to parse response: %w", err)
+		}
 
 		fmt.Printf("%-20s %-10s %-10s %-16s %s\n", "ID", "PLATFORM", "STATUS", "IP", "NAME")
 		for _, a := range assets {

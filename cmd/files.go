@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/spf13/cobra"
 )
@@ -22,7 +23,7 @@ var filesLsCmd = &cobra.Command{
 			return err
 		}
 
-		resp, err := c.Get(fmt.Sprintf("/api/v2/assets/%s/files?path=%s", args[0], args[1]))
+		resp, err := c.Get(fmt.Sprintf("/api/v2/assets/%s/files?path=%s", url.PathEscape(args[0]), url.QueryEscape(args[1])))
 		if err != nil {
 			return err
 		}
@@ -54,7 +55,7 @@ var filesCatCmd = &cobra.Command{
 			return err
 		}
 
-		resp, err := c.Get(fmt.Sprintf("/api/v2/assets/%s/files/read?path=%s", args[0], args[1]))
+		resp, err := c.Get(fmt.Sprintf("/api/v2/assets/%s/files/read?path=%s", url.PathEscape(args[0]), url.QueryEscape(args[1])))
 		if err != nil {
 			return err
 		}

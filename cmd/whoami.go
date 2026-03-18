@@ -27,7 +27,9 @@ var whoamiCmd = &cobra.Command{
 		}
 
 		var data map[string]any
-		json.Unmarshal(resp.Data, &data)
+		if err := json.Unmarshal(resp.Data, &data); err != nil {
+			return fmt.Errorf("failed to parse response: %w", err)
+		}
 
 		fmt.Printf("Auth:     %v\n", data["auth_type"])
 		fmt.Printf("Role:     %v\n", data["role"])
@@ -47,7 +49,10 @@ var whoamiCmd = &cobra.Command{
 		if assets, ok := data["available_assets"].([]any); ok {
 			fmt.Printf("Assets:   %d accessible\n", len(assets))
 			for _, a := range assets {
-				asset := a.(map[string]any)
+				asset, ok := a.(map[string]any)
+				if !ok {
+					continue
+				}
 				status := "offline"
 				if asset["online"] == true {
 					status = "online"
