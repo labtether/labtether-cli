@@ -1,1 +1,50 @@
-labtether-cli
+# OS
+.DS_Store
+Thumbs.db
+
+# Go build output
+bin/
+/labtether-cli
+*.test
+*.prof
+*.pprof
+__debug_bin*
+coverage.out
+coverage.html
+vendor/
+go.work
+go.work.sum
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Runtime dumps / core files
+*.dump
+*.dmp
+core
+core.*
+
+# Editor / IDE
+.vscode/
+.idea/
+.history/
+.vs/
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# Claude / AI tooling
+CLAUDE.md
+AGENTS.md
+.claude/
+.mcp.json
+.context/
+
+# Superpowers / worktrees / MCP
+.superpowers/
+.worktrees/
+.playwright-mcp/
+.gstack/
