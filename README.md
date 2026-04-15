@@ -1,3 +1,9 @@
+<div align="center">
+
+<img src=".github/logo.svg" alt="LabTether" width="80" />
+
+</div>
+
 # LabTether CLI
 
 Command-line interface for managing your [LabTether](https://labtether.com) hub.
