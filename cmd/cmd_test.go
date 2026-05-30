@@ -189,6 +189,25 @@ func TestConfigSetHost_SavesAndLoads(t *testing.T) {
 	}
 }
 
+func TestConfigSetHost_NormalizesWhitespaceAndTrailingSlash(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("LABTETHER_HOST", "")
+	t.Setenv("LABTETHER_API_KEY", "")
+	cfgHost = ""
+	cfgAPIKey = ""
+
+	_, _, err := runCmd(t, "config", "set-host", " https://myhub.local/ ")
+	if err != nil {
+		t.Fatalf("config set-host error: %v", err)
+	}
+
+	cfg := loadConfig()
+	if cfg.Host != "https://myhub.local" {
+		t.Errorf("Host = %q, want %q", cfg.Host, "https://myhub.local")
+	}
+}
+
 func TestConfigSetKey_SavesAndLoads(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)

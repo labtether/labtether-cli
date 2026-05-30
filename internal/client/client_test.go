@@ -32,6 +32,34 @@ func TestClient_Get(t *testing.T) {
 	}
 }
 
+func TestClient_NormalizesBaseURLAndAPIKey(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/whoami" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer test-key" {
+			t.Errorf("Authorization = %q", r.Header.Get("Authorization"))
+		}
+		json.NewEncoder(w).Encode(map[string]any{
+			"request_id": "req_test",
+			"data":       map[string]string{"role": "admin"},
+		})
+	}))
+	defer srv.Close()
+
+	c := New(" "+srv.URL+"/ ", " test-key ")
+	if c.BaseURL != srv.URL {
+		t.Fatalf("BaseURL = %q, want %q", c.BaseURL, srv.URL)
+	}
+	resp, err := c.Get("/api/v2/whoami")
+	if err != nil {
+		t.Fatalf("Get error: %v", err)
+	}
+	if resp.RequestID != "req_test" {
+		t.Errorf("request_id = %q, want req_test", resp.RequestID)
+	}
+}
+
 func TestClient_Post(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
