@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -211,6 +212,46 @@ func TestConfigSetKey_NoArg(t *testing.T) {
 	_, _, err := runCmd(t, "config", "set-key")
 	if err == nil {
 		t.Fatal("expected error: set-key requires exactly one arg")
+	}
+}
+
+func TestAPIKeyStatusDoesNotExposeSecretMaterial(t *testing.T) {
+	secret := "lt_supersecretkey"
+	status := apiKeyStatus(secret != "")
+	if strings.Contains(status, "super") || strings.Contains(status, "key") || strings.Contains(status, "lt_") {
+		t.Fatalf("status leaked secret material: %q", status)
+	}
+	if status != "(set)" {
+		t.Fatalf("status = %q, want (set)", status)
+	}
+}
+
+func TestRedactSensitiveJSON(t *testing.T) {
+	input := json.RawMessage(`{
+		"host": "hub.local",
+		"api_key": "lt_supersecretkey",
+		"api_key_status": "(set)",
+		"nested": {
+			"access_token": "token-value",
+			"name": "visible"
+		}
+	}`)
+
+	data, err := json.Marshal(redactSensitiveJSON(input))
+	if err != nil {
+		t.Fatalf("marshal redacted json: %v", err)
+	}
+	out := string(data)
+	for _, leaked := range []string{"lt_supersecretkey", "token-value"} {
+		if strings.Contains(out, leaked) {
+			t.Fatalf("redacted JSON leaked %q in %s", leaked, out)
+		}
+	}
+	if !strings.Contains(out, "visible") {
+		t.Fatalf("redacted JSON removed non-sensitive value: %s", out)
+	}
+	if !strings.Contains(out, "(set)") {
+		t.Fatalf("redacted JSON removed safe secret status: %s", out)
 	}
 }
 
