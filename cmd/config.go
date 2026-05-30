@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -17,11 +18,11 @@ var configSetHostCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := loadConfig()
-		cfg.Host = args[0]
+		cfg.Host = strings.TrimRight(strings.TrimSpace(args[0]), "/")
 		if err := saveConfig(cfg); err != nil {
 			return fmt.Errorf("save config: %w", err)
 		}
-		fmt.Printf("Hub host set to: %s\n", args[0])
+		fmt.Printf("Hub host set to: %s\n", cfg.Host)
 		return nil
 	},
 }
@@ -32,7 +33,7 @@ var configSetKeyCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := loadConfig()
-		cfg.APIKey = args[0]
+		cfg.APIKey = strings.TrimSpace(args[0])
 		if err := saveConfig(cfg); err != nil {
 			return fmt.Errorf("save config: %w", err)
 		}

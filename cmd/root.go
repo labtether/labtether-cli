@@ -90,6 +90,8 @@ func newClient() (*client.Client, error) {
 		key = cfgAPIKey
 	}
 
+	host = strings.TrimSpace(host)
+	key = strings.TrimSpace(key)
 	if host == "" {
 		return nil, fmt.Errorf("hub host not configured -- run: labtether-cli config set-host <url>")
 	}
