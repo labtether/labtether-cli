@@ -136,8 +136,71 @@ func saveConfig(cfg config) error {
 }
 
 func printJSON(v any) {
-	data, _ := json.MarshalIndent(v, "", "  ")
+	data, _ := json.MarshalIndent(redactSensitiveJSON(v), "", "  ")
 	fmt.Println(string(data))
+}
+
+func redactSensitiveJSON(v any) any {
+	var decoded any
+	switch value := v.(type) {
+	case json.RawMessage:
+		if err := json.Unmarshal(value, &decoded); err != nil {
+			return v
+		}
+	default:
+		data, err := json.Marshal(value)
+		if err != nil {
+			return v
+		}
+		if err := json.Unmarshal(data, &decoded); err != nil {
+			return v
+		}
+	}
+	return redactDecodedJSON(decoded)
+}
+
+func redactDecodedJSON(v any) any {
+	switch value := v.(type) {
+	case map[string]any:
+		for key, child := range value {
+			if isSensitiveJSONKey(key) && !isSafeSecretStatus(child) {
+				value[key] = "[redacted]"
+				continue
+			}
+			value[key] = redactDecodedJSON(child)
+		}
+		return value
+	case []any:
+		for i, child := range value {
+			value[i] = redactDecodedJSON(child)
+		}
+		return value
+	default:
+		return value
+	}
+}
+
+func isSensitiveJSONKey(key string) bool {
+	normalized := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(key, "-", "_"), " ", "_"))
+	if strings.Contains(normalized, "password") ||
+		strings.Contains(normalized, "secret") ||
+		strings.Contains(normalized, "token") ||
+		strings.Contains(normalized, "api_key") ||
+		strings.Contains(normalized, "private_key") {
+		return true
+	}
+	return normalized == "apikey"
+}
+
+func isSafeSecretStatus(v any) bool {
+	switch value := v.(type) {
+	case string:
+		return value == "(set)" || value == "(not set)" || value == "[redacted]"
+	case bool:
+		return true
+	default:
+		return false
+	}
 }
 
 func printError(err error) {
