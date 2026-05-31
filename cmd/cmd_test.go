@@ -203,6 +203,14 @@ func TestExecCmd_InvalidTimeoutsFailBeforeClientConfig(t *testing.T) {
 			args: []string{"exec", "--timeout", "301", "asset-1", "echo ok"},
 		},
 		{
+			name: "signed",
+			args: []string{"exec", "--timeout", "+30", "asset-1", "echo ok"},
+		},
+		{
+			name: "malformed",
+			args: []string{"exec", "--timeout", "30abc", "asset-1", "echo ok"},
+		},
+		{
 			name: "multi target too high",
 			args: []string{"exec", "--targets", "asset-1,asset-2", "--timeout", "301", "uptime"},
 		},
@@ -217,6 +225,47 @@ func TestExecCmd_InvalidTimeoutsFailBeforeClientConfig(t *testing.T) {
 			}
 			if strings.Contains(err.Error(), "not configured") || strings.Contains(err.Error(), "request failed") {
 				t.Fatalf("timeout validation should fail before client setup/network, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestDockerLogsCmd_InvalidTailFailsBeforeClientConfig(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+	}{
+		{
+			name: "zero",
+			args: []string{"docker", "logs", "--tail", "0", "container-1"},
+		},
+		{
+			name: "negative",
+			args: []string{"docker", "logs", "--tail", "-1", "container-1"},
+		},
+		{
+			name: "too high",
+			args: []string{"docker", "logs", "--tail", "10001", "container-1"},
+		},
+		{
+			name: "signed",
+			args: []string{"docker", "logs", "--tail", "+100", "container-1"},
+		},
+		{
+			name: "malformed",
+			args: []string{"docker", "logs", "--tail", "100abc", "container-1"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, err := runCmd(t, tc.args...)
+			if err == nil {
+				t.Fatal("expected tail validation error")
+			}
+			if !strings.Contains(err.Error(), "tail must be between 1 and 10000") {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if strings.Contains(err.Error(), "not configured") || strings.Contains(err.Error(), "request failed") {
+				t.Fatalf("tail validation should fail before client setup/network, got: %v", err)
 			}
 		})
 	}
