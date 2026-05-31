@@ -55,7 +55,7 @@ var discoveryAcceptCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/discovery/proposals/%s/accept", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/discovery/proposals/%s/accept", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ var discoveryRejectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/discovery/proposals/%s/reject", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/discovery/proposals/%s/reject", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}

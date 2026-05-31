@@ -38,7 +38,7 @@ var haEntityCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/homeassistant/entities/" + args[0])
+		resp, err := c.Get("/api/v2/homeassistant/entities/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}

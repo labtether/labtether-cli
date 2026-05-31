@@ -20,7 +20,7 @@ var truenasGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/truenas/" + args[0])
+		resp, err := c.Get("/api/v2/truenas/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ var truenasPoolsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/truenas/" + args[0] + "/pools")
+		resp, err := c.Get("/api/v2/truenas/" + pathSegment(args[0]) + "/pools")
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ var truenasDatasetsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/truenas/" + args[0] + "/datasets")
+		resp, err := c.Get("/api/v2/truenas/" + pathSegment(args[0]) + "/datasets")
 		if err != nil {
 			return err
 		}
@@ -74,7 +74,7 @@ var truenasSharesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/truenas/" + args[0] + "/shares")
+		resp, err := c.Get("/api/v2/truenas/" + pathSegment(args[0]) + "/shares")
 		if err != nil {
 			return err
 		}

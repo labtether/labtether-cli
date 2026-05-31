@@ -20,7 +20,7 @@ var portainerGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/portainer/environments/" + args[0])
+		resp, err := c.Get("/api/v2/portainer/environments/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ var portainerStacksCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/portainer/environments/" + args[0] + "/stacks")
+		resp, err := c.Get("/api/v2/portainer/environments/" + pathSegment(args[0]) + "/stacks")
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ var portainerContainersCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/portainer/environments/" + args[0] + "/containers")
+		resp, err := c.Get("/api/v2/portainer/environments/" + pathSegment(args[0]) + "/containers")
 		if err != nil {
 			return err
 		}

@@ -54,7 +54,7 @@ var dockerPsCmd = &cobra.Command{
 		}
 
 		all, _ := cmd.Flags().GetBool("all")
-		path := fmt.Sprintf("/api/v2/docker/hosts/%s/containers", args[0])
+		path := fmt.Sprintf("/api/v2/docker/hosts/%s/containers", pathSegment(args[0]))
 		if all {
 			path += "?all=true"
 		}
@@ -90,7 +90,7 @@ var dockerStartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/docker/containers/%s/start", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/docker/containers/%s/start", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -108,7 +108,7 @@ var dockerStopCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/docker/containers/%s/stop", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/docker/containers/%s/stop", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -126,7 +126,7 @@ var dockerRestartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/docker/containers/%s/restart", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/docker/containers/%s/restart", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -146,7 +146,7 @@ var dockerLogsCmd = &cobra.Command{
 		}
 
 		tail, _ := cmd.Flags().GetInt("tail")
-		path := fmt.Sprintf("/api/v2/docker/containers/%s/logs?tail=%d", args[0], tail)
+		path := fmt.Sprintf("/api/v2/docker/containers/%s/logs?tail=%d", pathSegment(args[0]), tail)
 
 		resp, err := c.Get(path)
 		if err != nil {

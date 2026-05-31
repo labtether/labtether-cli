@@ -15,7 +15,7 @@ var netCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/assets/" + args[0] + "/network")
+		resp, err := c.Get("/api/v2/assets/" + pathSegment(args[0]) + "/network")
 		if err != nil {
 			return err
 		}

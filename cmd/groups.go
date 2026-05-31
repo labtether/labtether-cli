@@ -38,7 +38,7 @@ var groupsGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/groups/" + args[0])
+		resp, err := c.Get("/api/v2/groups/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}

@@ -20,7 +20,7 @@ var pbsGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/pbs/" + args[0])
+		resp, err := c.Get("/api/v2/pbs/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ var pbsDatastoresCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/pbs/" + args[0] + "/datastores")
+		resp, err := c.Get("/api/v2/pbs/" + pathSegment(args[0]) + "/datastores")
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ var pbsSnapshotsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/pbs/" + args[0] + "/snapshots")
+		resp, err := c.Get("/api/v2/pbs/" + pathSegment(args[0]) + "/snapshots")
 		if err != nil {
 			return err
 		}

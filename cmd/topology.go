@@ -37,7 +37,7 @@ var topologyBlastRadiusCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/topology/blast-radius/" + args[0])
+		resp, err := c.Get("/api/v2/topology/blast-radius/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
@@ -55,7 +55,7 @@ var topologyUpstreamCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/topology/upstream/" + args[0])
+		resp, err := c.Get("/api/v2/topology/upstream/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}

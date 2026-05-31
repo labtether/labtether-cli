@@ -72,7 +72,7 @@ var proxmoxGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/proxmox/vms/" + args[0])
+		resp, err := c.Get("/api/v2/proxmox/vms/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
@@ -90,7 +90,7 @@ var proxmoxStartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/proxmox/vms/%s/start", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/proxmox/vms/%s/start", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -108,7 +108,7 @@ var proxmoxStopCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/proxmox/vms/%s/stop", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/proxmox/vms/%s/stop", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -126,7 +126,7 @@ var proxmoxRestartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/proxmox/vms/%s/restart", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/proxmox/vms/%s/restart", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}

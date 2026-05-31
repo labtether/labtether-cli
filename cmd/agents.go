@@ -38,7 +38,7 @@ var agentsGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/agents/" + args[0])
+		resp, err := c.Get("/api/v2/agents/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ var agentsApproveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/agents/%s/approve", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/agents/%s/approve", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -91,7 +91,7 @@ var agentsRejectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/agents/%s/reject", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/agents/%s/reject", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
