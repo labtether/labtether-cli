@@ -7,6 +7,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	minDockerLogTailLines = 1
+	maxDockerLogTailLines = 10000
+)
+
 var dockerCmd = &cobra.Command{
 	Use:   "docker",
 	Short: "Manage Docker containers across assets",
@@ -165,7 +170,11 @@ var dockerLogsCmd = &cobra.Command{
 
 func init() {
 	dockerPsCmd.Flags().Bool("all", false, "Show all containers (including stopped)")
-	dockerLogsCmd.Flags().Int("tail", 100, "Number of lines to show from the end of the logs")
+	dockerLogsCmd.Flags().Var(
+		newBoundedIntValue(100, "tail", "", minDockerLogTailLines, maxDockerLogTailLines),
+		"tail",
+		"Number of lines to show from the end of the logs",
+	)
 	dockerCmd.AddCommand(dockerHostsCmd, dockerPsCmd, dockerStartCmd, dockerStopCmd, dockerRestartCmd, dockerLogsCmd)
 	rootCmd.AddCommand(dockerCmd)
 }
