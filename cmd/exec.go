@@ -9,6 +9,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	minExecTimeoutSeconds = 1
+	maxExecTimeoutSeconds = 300
+)
+
 var execCmd = &cobra.Command{
 	Use:   "exec <asset> <command>",
 	Short: "Run a command on an asset",
@@ -19,6 +24,9 @@ var execCmd = &cobra.Command{
 		group, _ := cmd.Flags().GetString("group")
 		timeout, _ := cmd.Flags().GetInt("timeout")
 
+		if timeout < minExecTimeoutSeconds || timeout > maxExecTimeoutSeconds {
+			return fmt.Errorf("timeout must be between %d and %d seconds", minExecTimeoutSeconds, maxExecTimeoutSeconds)
+		}
 		if targets == "" && group == "" && len(args) < 2 {
 			return fmt.Errorf("usage: labtether-cli exec <asset> <command>\n  or:  labtether-cli exec --targets a,b,c <command>\n  or:  labtether-cli exec --group <name> <command>")
 		}
@@ -80,7 +88,7 @@ var execCmd = &cobra.Command{
 		assetID := args[0]
 		command := strings.Join(args[1:], " ")
 
-		resp, err := c.Post("/api/v2/assets/"+assetID+"/exec", map[string]any{
+		resp, err := c.Post(fmt.Sprintf("/api/v2/assets/%s/exec", pathSegment(assetID)), map[string]any{
 			"command": command,
 			"timeout": timeout,
 		})
