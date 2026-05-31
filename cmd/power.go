@@ -15,7 +15,7 @@ var rebootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/reboot", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/reboot", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -33,7 +33,7 @@ var shutdownCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/shutdown", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/shutdown", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -51,7 +51,7 @@ var wakeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/wake", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/wake", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}

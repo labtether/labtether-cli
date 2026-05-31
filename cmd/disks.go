@@ -15,7 +15,7 @@ var disksCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/assets/" + args[0] + "/disks")
+		resp, err := c.Get("/api/v2/assets/" + pathSegment(args[0]) + "/disks")
 		if err != nil {
 			return err
 		}

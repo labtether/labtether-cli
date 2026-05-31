@@ -3,6 +3,8 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -20,6 +22,25 @@ func runCmd(t *testing.T, args ...string) (stdout, stderr string, err error) {
 
 	// Reset flag state — cobra caches persistent-flag values between calls
 	// within the same process; reset to defaults before each test.
+	cfgHost = ""
+	cfgAPIKey = ""
+	jsonOutput = false
+
+	var outBuf, errBuf bytes.Buffer
+	rootCmd.SetOut(&outBuf)
+	rootCmd.SetErr(&errBuf)
+	rootCmd.SetArgs(args)
+
+	err = rootCmd.Execute()
+	return outBuf.String(), errBuf.String(), err
+}
+
+func runConfiguredCmd(t *testing.T, host string, args ...string) (stdout, stderr string, err error) {
+	t.Helper()
+
+	t.Setenv("LABTETHER_HOST", host)
+	t.Setenv("LABTETHER_API_KEY", "test-key")
+
 	cfgHost = ""
 	cfgAPIKey = ""
 	jsonOutput = false
@@ -149,6 +170,29 @@ func TestAssetsGetCmd_NoArgs(t *testing.T) {
 	_, _, err := runCmd(t, "assets", "get")
 	if err == nil {
 		t.Fatal("expected error: 'assets get' requires exactly one arg")
+	}
+}
+
+func TestCLIPathSegmentsAreEscaped(t *testing.T) {
+	var gotPath, gotQuery string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.EscapedPath()
+		gotQuery = r.URL.RawQuery
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]string{"logs": "ok"},
+		})
+	}))
+	defer server.Close()
+
+	_, _, err := runConfiguredCmd(t, server.URL, "docker", "logs", "--tail", "7", "ct/one?x=1")
+	if err != nil {
+		t.Fatalf("docker logs command failed: %v", err)
+	}
+	if gotPath != "/api/v2/docker/containers/ct%2Fone%3Fx=1/logs" {
+		t.Fatalf("unexpected escaped path %q", gotPath)
+	}
+	if gotQuery != "tail=7" {
+		t.Fatalf("unexpected query %q", gotQuery)
 	}
 }
 

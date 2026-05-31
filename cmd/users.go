@@ -15,7 +15,7 @@ var usersCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/assets/" + args[0] + "/users")
+		resp, err := c.Get("/api/v2/assets/" + pathSegment(args[0]) + "/users")
 		if err != nil {
 			return err
 		}

@@ -21,7 +21,7 @@ var servicesListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/assets/" + args[0] + "/services")
+		resp, err := c.Get("/api/v2/assets/" + pathSegment(args[0]) + "/services")
 		if err != nil {
 			return err
 		}
@@ -39,7 +39,7 @@ var servicesStartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/start", args[0], args[1]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/start", pathSegment(args[0]), pathSegment(args[1])), nil)
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ var servicesStopCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/stop", args[0], args[1]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/stop", pathSegment(args[0]), pathSegment(args[1])), nil)
 		if err != nil {
 			return err
 		}
@@ -75,7 +75,7 @@ var servicesRestartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/restart", args[0], args[1]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/restart", pathSegment(args[0]), pathSegment(args[1])), nil)
 		if err != nil {
 			return err
 		}

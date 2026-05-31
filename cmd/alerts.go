@@ -38,7 +38,7 @@ var alertsAckCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/alerts/%s/ack", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/alerts/%s/ack", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ var alertsSilenceCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/alerts/%s/silence", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/alerts/%s/silence", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}

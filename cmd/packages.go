@@ -21,7 +21,7 @@ var packagesListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/assets/" + args[0] + "/packages")
+		resp, err := c.Get("/api/v2/assets/" + pathSegment(args[0]) + "/packages")
 		if err != nil {
 			return err
 		}
@@ -39,7 +39,7 @@ var packagesInstallCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/install", args[0]),
+		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/install", pathSegment(args[0])),
 			map[string]string{"package": args[1]})
 		if err != nil {
 			return err
@@ -58,7 +58,7 @@ var packagesUpdateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/update", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/update", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}

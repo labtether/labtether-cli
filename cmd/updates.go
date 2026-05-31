@@ -43,7 +43,7 @@ var updatesPlansExecuteCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/updates/plans/%s/execute", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/updates/plans/%s/execute", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -83,7 +83,7 @@ var updatesRunsGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/updates/runs/" + args[0])
+		resp, err := c.Get("/api/v2/updates/runs/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}

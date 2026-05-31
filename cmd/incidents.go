@@ -38,7 +38,7 @@ var incidentsGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/incidents/" + args[0])
+		resp, err := c.Get("/api/v2/incidents/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ var incidentsAckCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/incidents/%s/ack", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/incidents/%s/ack", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -74,7 +74,7 @@ var incidentsResolveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/incidents/%s/resolve", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/incidents/%s/resolve", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}

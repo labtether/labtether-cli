@@ -37,7 +37,7 @@ var metricsAssetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/assets/" + args[0] + "/metrics")
+		resp, err := c.Get("/api/v2/assets/" + pathSegment(args[0]) + "/metrics")
 		if err != nil {
 			return err
 		}

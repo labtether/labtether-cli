@@ -38,7 +38,7 @@ var failoverGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/failover/" + args[0])
+		resp, err := c.Get("/api/v2/failover/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ var failoverTriggerCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/failover/%s/trigger", args[0]), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/failover/%s/trigger", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}

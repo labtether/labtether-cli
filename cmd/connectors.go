@@ -38,7 +38,7 @@ var connectorsGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/connectors/" + args[0])
+		resp, err := c.Get("/api/v2/connectors/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ var connectorsTestCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Post(fmt.Sprintf("/api/v2/connectors/%s/test", args[0]), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/connectors/%s/test", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}

@@ -37,7 +37,7 @@ var collectorsGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/collectors/" + args[0])
+		resp, err := c.Get("/api/v2/collectors/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
