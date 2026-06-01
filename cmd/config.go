@@ -17,7 +17,10 @@ var configSetHostCmd = &cobra.Command{
 	Short: "Set the hub URL",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := loadConfig()
+		cfg, err := loadConfig()
+		if err != nil {
+			return err
+		}
 		cfg.Host = strings.TrimRight(strings.TrimSpace(args[0]), "/")
 		if err := saveConfig(cfg); err != nil {
 			return fmt.Errorf("save config: %w", err)
@@ -32,7 +35,10 @@ var configSetKeyCmd = &cobra.Command{
 	Short: "Set the API key",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := loadConfig()
+		cfg, err := loadConfig()
+		if err != nil {
+			return err
+		}
 		cfg.APIKey = strings.TrimSpace(args[0])
 		if err := saveConfig(cfg); err != nil {
 			return fmt.Errorf("save config: %w", err)
@@ -46,7 +52,10 @@ var configShowCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Show current configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := loadConfig()
+		cfg, err := loadConfig()
+		if err != nil {
+			return err
+		}
 		keyStatus := apiKeyStatus(cfg.APIKey != "")
 
 		if jsonOutput {

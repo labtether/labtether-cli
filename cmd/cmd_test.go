@@ -75,6 +75,15 @@ func runConfiguredCmd(t *testing.T, host string, args ...string) (stdout, stderr
 	return outBuf.String(), errBuf.String(), err
 }
 
+func mustLoadConfig(t *testing.T) config {
+	t.Helper()
+	cfg, err := loadConfig()
+	if err != nil {
+		t.Fatalf("loadConfig: %v", err)
+	}
+	return cfg
+}
+
 // ── newClient / config resolution ─────────────────────────────────────────
 
 func TestNewClient_NotConfigured_NoHost(t *testing.T) {
@@ -356,7 +365,7 @@ func TestConfigSetHost_SavesAndLoads(t *testing.T) {
 	}
 
 	// Load the saved config directly
-	cfg := loadConfig()
+	cfg := mustLoadConfig(t)
 	if cfg.Host != "https://myhub.local" {
 		t.Errorf("Host = %q, want %q", cfg.Host, "https://myhub.local")
 	}
@@ -375,7 +384,7 @@ func TestConfigSetHost_NormalizesWhitespaceAndTrailingSlash(t *testing.T) {
 		t.Fatalf("config set-host error: %v", err)
 	}
 
-	cfg := loadConfig()
+	cfg := mustLoadConfig(t)
 	if cfg.Host != "https://myhub.local" {
 		t.Errorf("Host = %q, want %q", cfg.Host, "https://myhub.local")
 	}
@@ -394,7 +403,7 @@ func TestConfigSetKey_SavesAndLoads(t *testing.T) {
 		t.Fatalf("config set-key error: %v", err)
 	}
 
-	cfg := loadConfig()
+	cfg := mustLoadConfig(t)
 	if cfg.APIKey != "lt_supersecretkey" {
 		t.Errorf("APIKey = %q, want %q", cfg.APIKey, "lt_supersecretkey")
 	}
@@ -460,7 +469,7 @@ func TestSaveLoadConfig_RoundTrip(t *testing.T) {
 		t.Fatalf("saveConfig: %v", err)
 	}
 
-	got := loadConfig()
+	got := mustLoadConfig(t)
 	if got.Host != want.Host {
 		t.Errorf("Host = %q, want %q", got.Host, want.Host)
 	}
@@ -475,9 +484,73 @@ func TestLoadConfig_MissingFile(t *testing.T) {
 	cfgHost = ""
 	cfgAPIKey = ""
 
-	cfg := loadConfig()
+	cfg := mustLoadConfig(t)
 	if cfg.Host != "" || cfg.APIKey != "" {
 		t.Errorf("expected empty config when file absent, got %+v", cfg)
+	}
+}
+
+func TestLoadConfig_InvalidJSONReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	if err := os.MkdirAll(configDir(), 0700); err != nil {
+		t.Fatalf("mkdir config dir: %v", err)
+	}
+	if err := os.WriteFile(configPath(), []byte(`{"host":`), 0600); err != nil {
+		t.Fatalf("write invalid config: %v", err)
+	}
+
+	if _, err := loadConfig(); err == nil {
+		t.Fatal("expected invalid config JSON to return an error")
+	}
+}
+
+func TestConfigSetKeyRefusesInvalidExistingConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("LABTETHER_HOST", "")
+	t.Setenv("LABTETHER_API_KEY", "")
+	if err := os.MkdirAll(configDir(), 0700); err != nil {
+		t.Fatalf("mkdir config dir: %v", err)
+	}
+	original := []byte(`{"host":`)
+	if err := os.WriteFile(configPath(), original, 0600); err != nil {
+		t.Fatalf("write invalid config: %v", err)
+	}
+
+	_, _, err := runCmd(t, "config", "set-key", "lt_newkey")
+	if err == nil {
+		t.Fatal("expected set-key to fail for invalid existing config")
+	}
+	got, readErr := os.ReadFile(configPath())
+	if readErr != nil {
+		t.Fatalf("read config: %v", readErr)
+	}
+	if string(got) != string(original) {
+		t.Fatalf("invalid config was overwritten: %q", string(got))
+	}
+}
+
+func TestNewClientAllowsEnvToBypassInvalidConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("LABTETHER_HOST", "https://env-hub.local")
+	t.Setenv("LABTETHER_API_KEY", "env-key")
+	cfgHost = ""
+	cfgAPIKey = ""
+	if err := os.MkdirAll(configDir(), 0700); err != nil {
+		t.Fatalf("mkdir config dir: %v", err)
+	}
+	if err := os.WriteFile(configPath(), []byte(`{"host":`), 0600); err != nil {
+		t.Fatalf("write invalid config: %v", err)
+	}
+
+	c, err := newClient()
+	if err != nil {
+		t.Fatalf("newClient should use complete env config despite invalid config file: %v", err)
+	}
+	if !strings.Contains(c.BaseURL, "env-hub") {
+		t.Fatalf("env host not used; BaseURL = %s", c.BaseURL)
 	}
 }
 
