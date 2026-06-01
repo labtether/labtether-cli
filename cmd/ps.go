@@ -33,7 +33,9 @@ var psListCmd = &cobra.Command{
 		}
 
 		var processes []map[string]any
-		json.Unmarshal(resp.Data, &processes)
+		if err := decodeResponseData(resp, &processes); err != nil {
+			return err
+		}
 
 		fmt.Printf("%-8s %-8s %-6s %-6s %s\n", "PID", "USER", "CPU%", "MEM%", "COMMAND")
 		for _, p := range processes {
@@ -60,7 +62,7 @@ var psKillCmd = &cobra.Command{
 			"signal": signal,
 		}
 
-		_, err = c.Post("/api/v2/assets/"+args[0]+"/processes/kill", body)
+		_, err = c.Post("/api/v2/assets/"+pathSegment(args[0])+"/processes/kill", body)
 		if err != nil {
 			return err
 		}

@@ -37,7 +37,9 @@ var dockerHostsCmd = &cobra.Command{
 		}
 
 		var hosts []map[string]any
-		json.Unmarshal(resp.Data, &hosts)
+		if err := decodeResponseData(resp, &hosts); err != nil {
+			return err
+		}
 
 		fmt.Printf("%-20s %-10s %-10s %s\n", "HOST", "STATUS", "CONTAINERS", "VERSION")
 		for _, h := range hosts {
@@ -75,7 +77,9 @@ var dockerPsCmd = &cobra.Command{
 		}
 
 		var containers []map[string]any
-		json.Unmarshal(resp.Data, &containers)
+		if err := decodeResponseData(resp, &containers); err != nil {
+			return err
+		}
 
 		fmt.Printf("%-14s %-25s %-12s %-10s %s\n", "CONTAINER ID", "IMAGE", "STATUS", "PORTS", "NAME")
 		for _, ct := range containers {
@@ -159,7 +163,9 @@ var dockerLogsCmd = &cobra.Command{
 		}
 
 		var data map[string]any
-		json.Unmarshal(resp.Data, &data)
+		if err := decodeResponseData(resp, &data); err != nil {
+			return err
+		}
 
 		if logs, ok := data["logs"].(string); ok {
 			fmt.Print(logs)

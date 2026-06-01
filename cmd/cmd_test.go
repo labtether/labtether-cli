@@ -334,6 +334,66 @@ func TestExecCmd_SingleTargetPathSegmentIsEscaped(t *testing.T) {
 	}
 }
 
+func TestPsKillCmd_AssetPathSegmentIsEscaped(t *testing.T) {
+	var gotPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.EscapedPath()
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{},
+		})
+	}))
+	defer server.Close()
+
+	_, _, err := runConfiguredCmd(t, server.URL, "ps", "kill", "asset/one?x=1", "123")
+	if err != nil {
+		t.Fatalf("ps kill command failed: %v", err)
+	}
+	if gotPath != "/api/v2/assets/asset%2Fone%3Fx=1/processes/kill" {
+		t.Fatalf("unexpected escaped path %q", gotPath)
+	}
+}
+
+func TestHumanOutputCommandsFailOnMalformedResponseData(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		data any
+	}{
+		{
+			name: "docker hosts expects list",
+			args: []string{"docker", "hosts"},
+			data: map[string]any{"wrong": true},
+		},
+		{
+			name: "files cat expects object",
+			args: []string{"files", "cat", "asset-1", "/tmp/test.txt"},
+			data: []any{"wrong"},
+		},
+		{
+			name: "ps list expects list",
+			args: []string{"ps", "list", "asset-1"},
+			data: map[string]any{"wrong": true},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"data": tc.data,
+				})
+			}))
+			defer server.Close()
+
+			_, _, err := runConfiguredCmd(t, server.URL, tc.args...)
+			if err == nil {
+				t.Fatal("expected malformed response data to fail")
+			}
+			if !strings.Contains(err.Error(), "decode response data") {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
 // ── config commands (no network) ─────────────────────────────────────────
 
 func TestConfigShow_NoConfig(t *testing.T) {

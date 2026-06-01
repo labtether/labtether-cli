@@ -61,6 +61,13 @@ func outputResult(resp *client.V2Response, err error) error {
 	return nil
 }
 
+func decodeResponseData(resp *client.V2Response, dst any) error {
+	if err := json.Unmarshal(resp.Data, dst); err != nil {
+		return fmt.Errorf("decode response data: %w", err)
+	}
+	return nil
+}
+
 func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgHost, "host", "", "Hub URL (overrides config)")
 	rootCmd.PersistentFlags().StringVar(&cfgAPIKey, "api-key", "", "API key (overrides config)")
