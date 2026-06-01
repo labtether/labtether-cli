@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -70,7 +71,7 @@ func newClient() (*client.Client, error) {
 	// Priority: flag > env > config file
 
 	// Config file (lowest priority)
-	cfg := loadConfig()
+	cfg, cfgErr := loadConfig()
 	host := cfg.Host
 	key := cfg.APIKey
 
@@ -92,6 +93,9 @@ func newClient() (*client.Client, error) {
 
 	host = strings.TrimSpace(host)
 	key = strings.TrimSpace(key)
+	if cfgErr != nil && (host == "" || key == "") {
+		return nil, cfgErr
+	}
 	if host == "" {
 		return nil, fmt.Errorf("hub host not configured -- run: labtether-cli config set-host <url>")
 	}
@@ -118,14 +122,19 @@ func configPath() string {
 	return filepath.Join(configDir(), "config.json")
 }
 
-func loadConfig() config {
+func loadConfig() (config, error) {
 	var cfg config
 	data, err := os.ReadFile(configPath())
 	if err != nil {
-		return cfg
+		if errors.Is(err, os.ErrNotExist) {
+			return cfg, nil
+		}
+		return cfg, fmt.Errorf("read config %s: %w", configPath(), err)
 	}
-	_ = json.Unmarshal(data, &cfg)
-	return cfg
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return cfg, fmt.Errorf("parse config %s: %w", configPath(), err)
+	}
+	return cfg, nil
 }
 
 func saveConfig(cfg config) error {
