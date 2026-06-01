@@ -34,7 +34,9 @@ var filesLsCmd = &cobra.Command{
 		}
 
 		var entries []map[string]any
-		json.Unmarshal(resp.Data, &entries)
+		if err := decodeResponseData(resp, &entries); err != nil {
+			return err
+		}
 
 		fmt.Printf("%-10s %-10s %-20s %s\n", "TYPE", "SIZE", "MODIFIED", "NAME")
 		for _, e := range entries {
@@ -61,7 +63,9 @@ var filesCatCmd = &cobra.Command{
 		}
 
 		var data map[string]any
-		json.Unmarshal(resp.Data, &data)
+		if err := decodeResponseData(resp, &data); err != nil {
+			return err
+		}
 
 		if content, ok := data["content"].(string); ok {
 			fmt.Print(content)
