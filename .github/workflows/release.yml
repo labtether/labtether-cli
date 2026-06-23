@@ -35,7 +35,7 @@ jobs:
             suffix: windows-amd64.exe
             archive: zip
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-go@v6
         with:
