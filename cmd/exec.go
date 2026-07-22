@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -13,6 +14,17 @@ const (
 	minExecTimeoutSeconds = 1
 	maxExecTimeoutSeconds = 300
 )
+
+type remoteExecResult struct {
+	ExitCode *int   `json:"exit_code"`
+	Stdout   string `json:"stdout"`
+	Error    string `json:"error,omitempty"`
+	Message  string `json:"message,omitempty"`
+}
+
+type multiExecResponse struct {
+	Results map[string]remoteExecResult `json:"results"`
+}
 
 var execCmd = &cobra.Command{
 	Use:   "exec <asset> <command>",
@@ -58,28 +70,51 @@ var execCmd = &cobra.Command{
 				return err
 			}
 
+			var data multiExecResponse
+			if err := json.Unmarshal(resp.Data, &data); err != nil {
+				return fmt.Errorf("failed to parse multi-target response: %w", err)
+			}
+			if len(data.Results) == 0 {
+				return fmt.Errorf("multi-target response did not contain any results")
+			}
 			if jsonOutput {
 				printJSON(json.RawMessage(resp.Data))
-				return nil
 			}
 
-			var data map[string]any
-			if err := json.Unmarshal(resp.Data, &data); err != nil {
-				return fmt.Errorf("failed to parse response: %w", err)
+			targetNames := make([]string, 0, len(data.Results))
+			for target := range data.Results {
+				targetNames = append(targetNames, target)
 			}
-
-			results, _ := data["results"].(map[string]any)
-			for target, res := range results {
-				result, ok := res.(map[string]any)
-				if !ok {
-					fmt.Printf("[%s] unexpected response format\n", target)
+			sort.Strings(targetNames)
+			for _, target := range targetNames {
+				if data.Results[target].ExitCode == nil {
+					return fmt.Errorf("multi-target result for %s is missing exit_code", target)
+				}
+			}
+			failed := 0
+			for _, target := range targetNames {
+				result := data.Results[target]
+				exitCode := *result.ExitCode
+				if result.Error != "" || exitCode != 0 {
+					failed++
+				}
+				if jsonOutput {
 					continue
 				}
-				if errMsg, ok := result["error"]; ok {
-					fmt.Printf("[%s] Error: %v\n", target, errMsg)
+				if result.Error != "" {
+					message := strings.TrimSpace(result.Message)
+					if message == "" {
+						message = result.Error
+					}
+					fmt.Printf("[%s] Error: %s\n", target, message)
+				} else if exitCode != 0 {
+					fmt.Printf("[%s] Exit code %d: %s\n", target, exitCode, result.Stdout)
 				} else {
-					fmt.Printf("[%s] %v\n", target, result["stdout"])
+					fmt.Printf("[%s] %s\n", target, result.Stdout)
 				}
+			}
+			if failed > 0 {
+				return fmt.Errorf("%d of %d remote commands failed", failed, len(data.Results))
 			}
 			return nil
 		}
@@ -96,20 +131,30 @@ var execCmd = &cobra.Command{
 			return err
 		}
 
-		if jsonOutput {
-			printJSON(json.RawMessage(resp.Data))
-			return nil
-		}
-
-		var data map[string]any
+		var data remoteExecResult
 		if err := json.Unmarshal(resp.Data, &data); err != nil {
 			return fmt.Errorf("failed to parse response: %w", err)
 		}
-		if output, ok := data["stdout"].(string); ok && output != "" {
-			fmt.Println(output)
+		if data.ExitCode == nil {
+			return fmt.Errorf("remote command response is missing exit_code")
 		}
-		if exitCode, ok := data["exit_code"].(float64); ok && exitCode != 0 {
-			fmt.Fprintf(os.Stderr, "Exit code: %d\n", int(exitCode))
+		if jsonOutput {
+			printJSON(json.RawMessage(resp.Data))
+		} else if data.Stdout != "" {
+			fmt.Println(data.Stdout)
+		}
+		if data.Error != "" {
+			message := strings.TrimSpace(data.Message)
+			if message == "" {
+				message = data.Error
+			}
+			return fmt.Errorf("remote command failed: %s", message)
+		}
+		if *data.ExitCode != 0 {
+			if !jsonOutput {
+				fmt.Fprintf(os.Stderr, "Exit code: %d\n", *data.ExitCode)
+			}
+			return fmt.Errorf("remote command failed with exit code %d", *data.ExitCode)
 		}
 		return nil
 	},

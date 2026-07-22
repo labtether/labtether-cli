@@ -16,6 +16,8 @@ import (
 func resetTestCommandState() {
 	cfgHost = ""
 	cfgAPIKey = ""
+	cfgAPIKeyFile = ""
+	cfgTLSCAFile = ""
 	jsonOutput = false
 	resetCobraCommandFlags(rootCmd)
 }
@@ -44,6 +46,7 @@ func runCmd(t *testing.T, args ...string) (stdout, stderr string, err error) {
 	// Wipe config env so tests don't accidentally inherit a real host/key
 	t.Setenv("LABTETHER_HOST", "")
 	t.Setenv("LABTETHER_API_KEY", "")
+	t.Setenv("LABTETHER_TLS_CA_FILE", "")
 
 	// Reset flag state — cobra caches persistent-flag values between calls
 	// within the same process; reset to defaults before each test.
@@ -63,6 +66,7 @@ func runConfiguredCmd(t *testing.T, host string, args ...string) (stdout, stderr
 
 	t.Setenv("LABTETHER_HOST", host)
 	t.Setenv("LABTETHER_API_KEY", "test-key")
+	t.Setenv("LABTETHER_TLS_CA_FILE", "")
 
 	resetTestCommandState()
 
@@ -116,18 +120,15 @@ func TestNewClient_NotConfigured_NoKey(t *testing.T) {
 	}
 }
 
-func TestNewClient_FlagOverridesEnv(t *testing.T) {
+func TestNewClient_RefusesAPIKeyCommandLineArgument(t *testing.T) {
 	t.Setenv("LABTETHER_HOST", "https://from-env.local")
 	t.Setenv("LABTETHER_API_KEY", "env-key")
 	cfgHost = "https://from-flag.local"
 	cfgAPIKey = "flag-key"
 
-	c, err := newClient()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !strings.Contains(c.BaseURL, "from-flag") {
-		t.Errorf("flag host not used; BaseURL = %s", c.BaseURL)
+	_, err := newClient()
+	if err == nil || !strings.Contains(err.Error(), "command-line arguments") {
+		t.Fatalf("expected command-line secret to be rejected, got %v", err)
 	}
 }
 
@@ -334,6 +335,80 @@ func TestExecCmd_SingleTargetPathSegmentIsEscaped(t *testing.T) {
 	}
 }
 
+func TestExecCmd_NonZeroRemoteExitFailsInHumanAndJSONModes(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"stdout":    "partial output",
+				"exit_code": 7,
+			},
+		})
+	}))
+	defer server.Close()
+
+	for _, args := range [][]string{
+		{"exec", "asset-1", "false"},
+		{"--json", "exec", "asset-1", "false"},
+	} {
+		_, _, err := runConfiguredCmd(t, server.URL, args...)
+		if err == nil || !strings.Contains(err.Error(), "exit code 7") {
+			t.Fatalf("args=%v should fail with remote exit code, got %v", args, err)
+		}
+	}
+}
+
+func TestExecCmd_MultiTargetFailsWhenAnyRemoteCommandFails(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"results": map[string]any{
+					"asset-ok":  map[string]any{"exit_code": 0, "stdout": "ok"},
+					"asset-bad": map[string]any{"exit_code": 1, "stdout": "failed"},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	for _, args := range [][]string{
+		{"exec", "--targets", "asset-ok,asset-bad", "check"},
+		{"--json", "exec", "--targets", "asset-ok,asset-bad", "check"},
+	} {
+		_, _, err := runConfiguredCmd(t, server.URL, args...)
+		if err == nil || !strings.Contains(err.Error(), "1 of 2 remote commands failed") {
+			t.Fatalf("args=%v should fail for partial remote failure, got %v", args, err)
+		}
+	}
+}
+
+func TestExecCmd_MultiTargetRejectsMissingResults(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{"summary": map[string]int{"total": 2}},
+		})
+	}))
+	defer server.Close()
+
+	_, _, err := runConfiguredCmd(t, server.URL, "exec", "--targets", "asset-a,asset-b", "check")
+	if err == nil || !strings.Contains(err.Error(), "did not contain any results") {
+		t.Fatalf("missing result map should fail closed, got %v", err)
+	}
+}
+
+func TestExecCmd_RejectsMissingExitCode(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{"stdout": "ambiguous"},
+		})
+	}))
+	defer server.Close()
+
+	_, _, err := runConfiguredCmd(t, server.URL, "exec", "asset-a", "check")
+	if err == nil || !strings.Contains(err.Error(), "missing exit_code") {
+		t.Fatalf("missing exit_code should fail closed, got %v", err)
+	}
+}
+
 func TestPsKillCmd_AssetPathSegmentIsEscaped(t *testing.T) {
 	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -458,7 +533,8 @@ func TestConfigSetKey_SavesAndLoads(t *testing.T) {
 	cfgHost = ""
 	cfgAPIKey = ""
 
-	_, _, err := runCmd(t, "config", "set-key", "lt_supersecretkey")
+	rootCmd.SetIn(strings.NewReader("lt_supersecretkey\n"))
+	_, _, err := runCmd(t, "config", "set-key")
 	if err != nil {
 		t.Fatalf("config set-key error: %v", err)
 	}
@@ -470,9 +546,17 @@ func TestConfigSetKey_SavesAndLoads(t *testing.T) {
 }
 
 func TestConfigSetKey_NoArg(t *testing.T) {
+	rootCmd.SetIn(strings.NewReader(""))
 	_, _, err := runCmd(t, "config", "set-key")
 	if err == nil {
-		t.Fatal("expected error: set-key requires exactly one arg")
+		t.Fatal("expected error for empty standard input")
+	}
+}
+
+func TestConfigSetKey_RefusesArgumentThatWouldLeakToProcessList(t *testing.T) {
+	_, _, err := runCmd(t, "config", "set-key", "lt_supersecretkey")
+	if err == nil {
+		t.Fatal("expected command-line API key to be rejected")
 	}
 }
 
@@ -578,7 +662,8 @@ func TestConfigSetKeyRefusesInvalidExistingConfig(t *testing.T) {
 		t.Fatalf("write invalid config: %v", err)
 	}
 
-	_, _, err := runCmd(t, "config", "set-key", "lt_newkey")
+	rootCmd.SetIn(strings.NewReader("lt_newkey\n"))
+	_, _, err := runCmd(t, "config", "set-key")
 	if err == nil {
 		t.Fatal("expected set-key to fail for invalid existing config")
 	}
