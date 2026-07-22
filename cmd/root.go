@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -14,14 +16,17 @@ import (
 )
 
 var (
-	cfgHost    string
-	cfgAPIKey  string
-	jsonOutput bool
+	cfgHost       string
+	cfgAPIKey     string
+	cfgAPIKeyFile string
+	cfgTLSCAFile  string
+	jsonOutput    bool
 )
 
 type config struct {
-	Host   string `json:"host"`
-	APIKey string `json:"api_key"`
+	Host      string `json:"host"`
+	APIKey    string `json:"api_key"` // #nosec G117 -- Deliberately persisted only in an ACL-protected, mode-0600 config file.
+	TLSCAFile string `json:"tls_ca_file,omitempty"`
 }
 
 var rootCmd = &cobra.Command{
@@ -71,6 +76,9 @@ func decodeResponseData(resp *client.V2Response, dst any) error {
 func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgHost, "host", "", "Hub URL (overrides config)")
 	rootCmd.PersistentFlags().StringVar(&cfgAPIKey, "api-key", "", "API key (overrides config)")
+	rootCmd.PersistentFlags().StringVar(&cfgAPIKeyFile, "api-key-file", "", "Read API key from a protected file")
+	rootCmd.PersistentFlags().StringVar(&cfgTLSCAFile, "tls-ca-file", "", "Trust additional PEM CA certificates for the hub")
+	_ = rootCmd.PersistentFlags().MarkDeprecated("api-key", "command-line secrets are visible in shell history and process listings; use --api-key-file or LABTETHER_API_KEY")
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
 }
 
@@ -81,6 +89,7 @@ func newClient() (*client.Client, error) {
 	cfg, cfgErr := loadConfig()
 	host := cfg.Host
 	key := cfg.APIKey
+	caFile := cfg.TLSCAFile
 
 	// Env vars override config
 	if v := os.Getenv("LABTETHER_HOST"); v != "" {
@@ -89,17 +98,31 @@ func newClient() (*client.Client, error) {
 	if v := os.Getenv("LABTETHER_API_KEY"); v != "" {
 		key = v
 	}
+	if v := os.Getenv("LABTETHER_TLS_CA_FILE"); v != "" {
+		caFile = v
+	}
+	if cfgAPIKeyFile != "" {
+		fileKey, err := readProtectedSecretFile(cfgAPIKeyFile)
+		if err != nil {
+			return nil, err
+		}
+		key = fileKey
+	}
 
 	// Flags override everything
 	if cfgHost != "" {
 		host = cfgHost
 	}
+	if cfgTLSCAFile != "" {
+		caFile = cfgTLSCAFile
+	}
 	if cfgAPIKey != "" {
-		key = cfgAPIKey
+		return nil, fmt.Errorf("refusing API key in command-line arguments; use --api-key-file or LABTETHER_API_KEY")
 	}
 
 	host = strings.TrimSpace(host)
 	key = strings.TrimSpace(key)
+	caFile = strings.TrimSpace(caFile)
 	if cfgErr != nil && (host == "" || key == "") {
 		return nil, cfgErr
 	}
@@ -107,14 +130,44 @@ func newClient() (*client.Client, error) {
 		return nil, fmt.Errorf("hub host not configured -- run: labtether-cli config set-host <url>")
 	}
 	if key == "" {
-		return nil, fmt.Errorf("api key not configured -- run: labtether-cli config set-key <key>")
+		return nil, fmt.Errorf("api key not configured -- run: labtether-cli config set-key")
 	}
 
-	if strings.HasPrefix(host, "http://") {
-		fmt.Fprintln(os.Stderr, "Warning: connecting over unencrypted HTTP — API key will be sent in cleartext")
+	if err := client.ValidateBaseURL(host); err != nil {
+		return nil, err
 	}
 
-	return client.New(host, key), nil
+	return client.NewWithTLSCAFile(host, key, caFile)
+}
+
+func readProtectedSecretFile(path string) (string, error) {
+	file, err := os.Open(path) // #nosec G304 -- The operator explicitly supplies this secret-file path; its opened descriptor is validated before reading.
+	if err != nil {
+		return "", fmt.Errorf("read API key file: %w", err)
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return "", fmt.Errorf("inspect API key file: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return "", fmt.Errorf("API key file must be a regular file")
+	}
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
+		return "", fmt.Errorf("API key file permissions are too broad; require mode 0600")
+	}
+	data, err := io.ReadAll(io.LimitReader(file, 64*1024+1))
+	if err != nil {
+		return "", fmt.Errorf("read API key file: %w", err)
+	}
+	if len(data) > 64*1024 {
+		return "", fmt.Errorf("API key file exceeds 64 KiB")
+	}
+	secret := strings.TrimSpace(string(data))
+	if secret == "" {
+		return "", fmt.Errorf("API key file is empty")
+	}
+	return secret, nil
 }
 
 func configDir() string {
@@ -131,15 +184,34 @@ func configPath() string {
 
 func loadConfig() (config, error) {
 	var cfg config
-	data, err := os.ReadFile(configPath())
+	path := configPath()
+	info, err := os.Lstat(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return cfg, nil
 		}
-		return cfg, fmt.Errorf("read config %s: %w", configPath(), err)
+		return cfg, fmt.Errorf("inspect config %s: %w", path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return cfg, fmt.Errorf("config %s must be a regular file, not a symlink or device", path)
+	}
+	if err := hardenConfigFile(path); err != nil {
+		return cfg, fmt.Errorf("protect config %s: %w", path, err)
+	}
+	file, err := os.Open(path) // #nosec G304 -- path is the fixed per-user LabTether configuration path and symlinks were rejected above.
+	if err != nil {
+		return cfg, fmt.Errorf("read config %s: %w", path, err)
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, 1024*1024+1))
+	if err != nil {
+		return cfg, fmt.Errorf("read config %s: %w", path, err)
+	}
+	if len(data) > 1024*1024 {
+		return cfg, fmt.Errorf("config %s exceeds 1 MiB", path)
 	}
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return cfg, fmt.Errorf("parse config %s: %w", configPath(), err)
+		return cfg, fmt.Errorf("parse config %s: %w", path, err)
 	}
 	return cfg, nil
 }
@@ -149,8 +221,35 @@ func saveConfig(cfg config) error {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
-	data, _ := json.MarshalIndent(cfg, "", "  ")
-	return os.WriteFile(configPath(), data, 0600)
+	data, err := json.MarshalIndent(cfg, "", "  ") // #nosec G117 -- Serialized only into the protected per-user credential config.
+	if err != nil {
+		return fmt.Errorf("encode config: %w", err)
+	}
+	tmp, err := os.CreateTemp(dir, ".config-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+	if err := hardenConfigFile(tmpPath); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := replaceConfigFile(tmpPath, configPath()); err != nil {
+		return err
+	}
+	return hardenConfigFile(configPath())
 }
 
 func printJSON(v any) {

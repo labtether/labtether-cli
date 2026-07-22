@@ -14,12 +14,17 @@ Command-line interface for managing your [LabTether](https://labtether.com) hub.
 
 ## Install
 
-Download the latest binary for your platform from [Releases](https://github.com/labtether/labtether-cli/releases/latest).
-
-Or install with Go:
+Choose an exact version from [Releases](https://github.com/labtether/labtether-cli/releases), download the binary plus its `.sha256` file, and verify both the checksum and GitHub build provenance before installation:
 
 ```bash
-go install github.com/labtether/labtether-cli@latest
+sha256sum --check labtether-cli-PLATFORM.sha256
+gh attestation verify labtether-cli-PLATFORM -R labtether/labtether-cli
+```
+
+Or install an exact version with Go:
+
+```bash
+go install github.com/labtether/labtether-cli@vX.Y.Z
 ```
 
 ---
@@ -29,7 +34,8 @@ go install github.com/labtether/labtether-cli@latest
 ```bash
 # Configure your hub connection
 labtether-cli config set-host https://your-hub:8443
-labtether-cli config set-key lt_your_api_key
+labtether-cli config set-ca /path/to/labtether-ca.crt  # for the default private CA
+labtether-cli config set-key  # prompts without exposing the key in argv
 
 # Check who you are and what you can access
 labtether-cli whoami
@@ -48,13 +54,13 @@ labtether-cli assets list
 | `agents` | Manage agent registrations and approvals |
 | `exec` | Run a command on a remote asset |
 | `services` | Manage system services on remote assets |
-| `docker` | Manage Docker containers, images, and hosts |
-| `files` | Upload, download, and browse remote files |
+| `docker` | Inspect Docker hosts and containers; start, stop, restart, and read container logs |
+| `files` | Browse directories and read remote files |
 | `ps` | List and manage processes on assets |
 | `alerts` | List, acknowledge, and silence alerts |
 | `incidents` | View and manage incidents |
 | `updates` | Manage update plans and runs across fleet |
-| `connectors` | Manage hub connectors (Proxmox, TrueNAS, etc.) |
+| `connectors` | Inspect and test configured hub connectors (Proxmox, TrueNAS, etc.) |
 | `proxmox` | Interact with Proxmox clusters, VMs, and Ceph |
 | `truenas` | Interact with TrueNAS pools, datasets, and shares |
 | `pbs` | Interact with Proxmox Backup Server |
@@ -75,9 +81,9 @@ All commands support `--json` for machine-readable output.
 
 The CLI reads configuration from three sources, in order of priority:
 
-1. **Flags** -- `--host` and `--api-key` on any command
-2. **Environment variables** -- `LABTETHER_HOST` and `LABTETHER_API_KEY`
-3. **Config file** -- `~/.config/labtether/config.json`, written by `config set-host` and `config set-key`
+1. **Flags** -- `--host`, `--api-key-file`, and `--tls-ca-file` on any command
+2. **Environment variables** -- `LABTETHER_HOST`, `LABTETHER_API_KEY`, and `LABTETHER_TLS_CA_FILE`
+3. **Config file** -- `~/.config/labtether/config.json`, written by `config set-host`, `config set-ca`, and `config set-key`
 
 ---
 

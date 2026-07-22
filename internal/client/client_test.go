@@ -2,10 +2,85 @@ package client
 
 import (
 	"encoding/json"
+	"encoding/pem"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestNewWithTLSCAFileTrustsPrivateCA(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"request_id": "req_tls",
+			"data":       map[string]string{"status": "ok"},
+		})
+	}))
+	defer srv.Close()
+
+	caPath := filepath.Join(t.TempDir(), "hub-ca.crt")
+	pemData := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw})
+	if err := os.WriteFile(caPath, pemData, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := NewWithTLSCAFile(srv.URL, "test-key", caPath)
+	if err != nil {
+		t.Fatalf("NewWithTLSCAFile: %v", err)
+	}
+	resp, err := c.Get("/api/v2/whoami")
+	if err != nil {
+		t.Fatalf("private-CA request failed: %v", err)
+	}
+	if resp.RequestID != "req_tls" {
+		t.Fatalf("request ID = %q, want req_tls", resp.RequestID)
+	}
+}
+
+func TestValidateTLSCAFileRejectsInvalidPEM(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "invalid.pem")
+	if err := os.WriteFile(path, []byte("not a certificate"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateTLSCAFile(path); err == nil || !strings.Contains(err.Error(), "no valid PEM") {
+		t.Fatalf("expected invalid PEM error, got %v", err)
+	}
+}
+
+func TestValidateBaseURLRejectsPlaintextNonLoopback(t *testing.T) {
+	if err := ValidateBaseURL("http://192.0.2.10:8080"); err == nil {
+		t.Fatal("expected plaintext non-loopback URL to be rejected")
+	}
+	for _, raw := range []string{"http://127.0.0.1:8080", "http://[::1]:8080", "https://hub.example.com"} {
+		if err := ValidateBaseURL(raw); err != nil {
+			t.Fatalf("expected %s to be accepted: %v", raw, err)
+		}
+	}
+}
+
+func TestClientRejectsOversizedResponse(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, `{"data":"`)
+		chunk := make([]byte, 1024*1024)
+		for i := range chunk {
+			chunk[i] = 'a'
+		}
+		for range 17 {
+			_, _ = w.Write(chunk)
+		}
+		_, _ = fmt.Fprint(w, `"}`)
+	}))
+	defer srv.Close()
+
+	_, err := New(srv.URL, "test-key").Get("/large")
+	if err == nil || !strings.Contains(err.Error(), "response exceeds") {
+		t.Fatalf("expected bounded response error, got %v", err)
+	}
+}
 
 func TestClient_Get(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
