@@ -54,7 +54,7 @@ jobs:
           VERSION: ${{ github.ref_name }}
         run: |
           CGO_ENABLED=0 go build -trimpath \
-            -ldflags="-s -w -X main.version=${VERSION}" \
+            -ldflags="-s -w -X github.com/labtether/labtether-cli/cmd.version=${VERSION}" \
             -o "labtether-cli-${SUFFIX}" \
             .
 
