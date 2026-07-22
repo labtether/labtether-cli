@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	version       = "dev"
 	cfgHost       string
 	cfgAPIKey     string
 	cfgAPIKeyFile string
@@ -30,9 +31,10 @@ type config struct {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "labtether-cli",
-	Short: "LabTether CLI -- control your homelab from the command line",
-	Long:  "labtether-cli is a command-line interface for the LabTether hub API. It lets you manage assets, run commands, manage files, and control your entire homelab.",
+	Use:     "labtether-cli",
+	Short:   "LabTether CLI -- control your homelab from the command line",
+	Long:    "labtether-cli is a command-line interface for the LabTether hub API. It lets you manage assets, run commands, manage files, and control your entire homelab.",
+	Version: version,
 }
 
 func Execute() int {

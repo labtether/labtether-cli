@@ -165,6 +165,16 @@ func TestExecute_NoArgs_ReturnsZero(t *testing.T) {
 	}
 }
 
+func TestVersionFlagReportsBuildVersion(t *testing.T) {
+	stdout, stderr, err := runCmd(t, "--version")
+	if err != nil {
+		t.Fatalf("--version returned error: %v (stderr: %s)", err, stderr)
+	}
+	if got, want := strings.TrimSpace(stdout), "labtether-cli version dev"; got != want {
+		t.Fatalf("--version output = %q, want %q", got, want)
+	}
+}
+
 // ── exec argument validation ──────────────────────────────────────────────
 
 func TestExecCmd_TooFewArgs_SingleTarget(t *testing.T) {
