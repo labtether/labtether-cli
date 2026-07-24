@@ -1,0 +1,21 @@
+# contract_id	path_glob	reason
+installed-cli-package	main.go	CLI entrypoint changes require an installed archive and version smoke
+installed-cli-package	cmd/root.go	Version, credential, permission, and root-command changes require an installed archive smoke
+installed-cli-package	go.mod	Dependency changes require an installed archive smoke
+installed-cli-package	go.sum	Dependency changes require an installed archive smoke
+installed-cli-package	.github/workflows/release.yml	Release packaging changes require an installed archive smoke
+installed-cli-package	scripts/ci/**	QA contract changes must prove every slow CLI contract
+installed-cli-package	.github/workflows/ci.yml	CI routing changes must prove every slow CLI contract
+cross-platform-build	cmd/**	Platform-specific command behavior must compile for every shipped operating system
+cross-platform-build	internal/**	Client and TLS behavior must compile for every shipped operating system
+cross-platform-build	main.go	The CLI entrypoint must compile for every shipped operating system
+cross-platform-build	go.mod	Dependency changes must compile for every shipped operating system
+cross-platform-build	go.sum	Dependency changes must compile for every shipped operating system
+cross-platform-build	.github/workflows/release.yml	Release target changes must compile for every shipped operating system
+cross-platform-build	scripts/ci/**	QA contract changes must prove every slow CLI contract
+cross-platform-build	.github/workflows/ci.yml	CI routing changes must prove every slow CLI contract
+tls-permission-behavior	cmd/config*	Config permission changes require focused credential and TLS tests
+tls-permission-behavior	cmd/tls.go	TLS command changes require focused credential and TLS tests
+tls-permission-behavior	internal/client/**	Client networking and TLS changes require focused credential and TLS tests
+tls-permission-behavior	scripts/ci/**	QA contract changes must prove every slow CLI contract
+tls-permission-behavior	.github/workflows/ci.yml	CI routing changes must prove every slow CLI contract
