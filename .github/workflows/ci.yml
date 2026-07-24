@@ -1,13 +1,41 @@
 name: CI
 on:
+  workflow_dispatch:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
+  qa-contracts:
+    runs-on: ubuntu-latest
+    outputs:
+      contracts: ${{ steps.select.outputs.contracts }}
+      mode: ${{ steps.select.outputs.mode }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test QA contract selector
+        run: ./scripts/ci/test-select-qa-contracts.sh
+      - name: Select risk-based QA contracts
+        id: select
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          mode="auto"
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" || "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            mode="full"
+          fi
+          ./scripts/ci/select-qa-contracts.sh \
+            --mode "${mode}" \
+            --base "${BASE_SHA:-}" \
+            --head "${GITHUB_SHA}"
+
   build-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -28,3 +56,69 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
       - run: go build ./...
+
+  installed-cli-package:
+    needs: qa-contracts
+    if: contains(format(',{0},', needs.qa-contracts.outputs.contracts), ',installed-cli-package,')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26'
+          cache: true
+      - name: Build, archive, install, and execute the native CLI
+        run: ./scripts/ci/installed-package-smoke.sh
+
+  cross-platform-build:
+    needs: qa-contracts
+    if: contains(format(',{0},', needs.qa-contracts.outputs.contracts), ',cross-platform-build,')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26'
+          cache: true
+      - name: Cross-build ${{ matrix.goos }}/${{ matrix.goarch }}
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: go build -trimpath -o "${RUNNER_TEMP}/labtether-cli-${GOOS}-${GOARCH}" .
+
+  tls-permission-behavior:
+    needs: qa-contracts
+    if: contains(format(',{0},', needs.qa-contracts.outputs.contracts), ',tls-permission-behavior,')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26'
+          cache: true
+      - name: Run focused credential, permission, and TLS tests with race detection
+        run: go test -race ./cmd ./internal/client
