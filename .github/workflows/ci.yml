@@ -10,6 +10,19 @@ permissions:
   contents: read
 
 jobs:
+  line-limit:
+    name: Handwritten code / 500-line limit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check line-limit gate behavior
+        run: python3 -m unittest scripts/ci/test_line_limit.py
+      - name: Enforce full-repository line limit
+        run: python3 scripts/ci/check-line-limit.py
+
   qa-contracts:
     runs-on: ubuntu-latest
     outputs:
@@ -37,8 +50,16 @@ jobs:
             --head "${GITHUB_SHA}"
 
   build-and-test:
+    needs: [line-limit]
+    if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Require source-size gate
+        shell: bash
+        env:
+          LINE_LIMIT_RESULT: ${{ needs.line-limit.result }}
+        run: |
+          test "${LINE_LIMIT_RESULT}" = success
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
