@@ -179,6 +179,7 @@ func init() {
 }
 
 func requestProxmoxPowerAction(c *client.Client, assetID, verb string) error {
+	c.HTTPClient.Timeout = hubLongActionTimeout
 	resp, err := c.Get("/api/v2/assets/" + pathSegment(assetID))
 	if err != nil {
 		return err

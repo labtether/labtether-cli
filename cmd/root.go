@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -23,6 +24,10 @@ var (
 	cfgTLSCAFile  string
 	jsonOutput    bool
 )
+
+// Hub package actions can run for 10 minutes; Proxmox tasks can exceed five.
+// Leave room for response transfer without cancelling an in-flight action.
+const hubLongActionTimeout = 12 * time.Minute
 
 type config struct {
 	Host      string `json:"host"`
