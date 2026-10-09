@@ -75,6 +75,21 @@ func decodeResponseData(resp *client.V2Response, dst any) error {
 	return nil
 }
 
+func decodeResponseList(resp *client.V2Response, field string, dst any) error {
+	var data map[string]json.RawMessage
+	if err := decodeResponseData(resp, &data); err != nil {
+		return err
+	}
+	raw, found := data[field]
+	if !found {
+		return fmt.Errorf("decode response data: missing %s", field)
+	}
+	if err := json.Unmarshal(raw, dst); err != nil {
+		return fmt.Errorf("decode response data: %s: %w", field, err)
+	}
+	return nil
+}
+
 func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgHost, "host", "", "Hub URL (overrides config)")
 	rootCmd.PersistentFlags().StringVar(&cfgAPIKey, "api-key", "", "API key (overrides config)")

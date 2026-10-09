@@ -14,7 +14,7 @@ var agentsCmd = &cobra.Command{
 
 var agentsListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all registered agents",
+	Short: "List connected agents",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -31,14 +31,14 @@ var agentsListCmd = &cobra.Command{
 
 var agentsGetCmd = &cobra.Command{
 	Use:   "get <id>",
-	Short: "Get agent details",
+	Short: "Get an agent asset's details",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/agents/" + pathSegment(args[0]))
+		resp, err := c.Get("/api/v2/assets/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ var agentsApproveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/agents/%s/approve", pathSegment(args[0])), nil)
+		_, err = c.Post("/api/v2/agents/pending/approve", map[string]string{"asset_id": args[0]})
 		if err != nil {
 			return err
 		}
@@ -91,7 +91,7 @@ var agentsRejectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/agents/%s/reject", pathSegment(args[0])), nil)
+		_, err = c.Post("/api/v2/agents/pending/reject", map[string]string{"asset_id": args[0]})
 		if err != nil {
 			return err
 		}

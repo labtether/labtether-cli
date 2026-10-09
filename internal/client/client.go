@@ -16,6 +16,7 @@ import (
 )
 
 const maxResponseBodyBytes int64 = 16 * 1024 * 1024
+const maxFileDownloadBytes int64 = 512 * 1024 * 1024
 const maxTLSCAFileBytes int64 = 1024 * 1024
 
 // Client is an HTTP client for the LabTether v2 API.
@@ -218,6 +219,60 @@ func (c *Client) do(method, path string, body any) (*V2Response, error) {
 // Get performs a GET request.
 func (c *Client) Get(path string) (*V2Response, error) {
 	return c.do("GET", path, nil)
+}
+
+// Download streams a bounded binary response, such as an agent file download.
+// File downloads do not use the v2 JSON envelope.
+func (c *Client) Download(path string, dst io.Writer) error {
+	if err := ValidateBaseURL(c.BaseURL); err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodGet, c.BaseURL+path, nil)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.APIKey)
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBodyBytes+1))
+		if err != nil {
+			return fmt.Errorf("read response: %w", err)
+		}
+		if int64(len(data)) > maxResponseBodyBytes {
+			return fmt.Errorf("response exceeds %d byte limit", maxResponseBodyBytes)
+		}
+		var v2resp V2Response
+		if json.Unmarshal(data, &v2resp) == nil {
+			message := v2resp.Message
+			if message == "" {
+				message = v2resp.Error
+			}
+			if message != "" {
+				return fmt.Errorf("%s (status %d)", message, resp.StatusCode)
+			}
+		}
+		return fmt.Errorf("request failed (status %d)", resp.StatusCode)
+	}
+	if resp.ContentLength > maxFileDownloadBytes {
+		return fmt.Errorf("response exceeds %d byte limit", maxFileDownloadBytes)
+	}
+	written, err := io.Copy(dst, io.LimitReader(resp.Body, maxFileDownloadBytes))
+	if err != nil {
+		return fmt.Errorf("read response: %w", err)
+	}
+	if written == maxFileDownloadBytes {
+		var extra [1]byte
+		if n, err := resp.Body.Read(extra[:]); n > 0 {
+			return fmt.Errorf("response exceeds %d byte limit", maxFileDownloadBytes)
+		} else if err != nil && err != io.EOF {
+			return fmt.Errorf("read response: %w", err)
+		}
+	}
+	return nil
 }
 
 // Post performs a POST request.

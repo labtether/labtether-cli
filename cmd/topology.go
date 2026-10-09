@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"net/url"
 
 	"github.com/spf13/cobra"
 )
@@ -12,14 +13,15 @@ var topologyCmd = &cobra.Command{
 }
 
 var topologyDependenciesCmd = &cobra.Command{
-	Use:   "dependencies",
-	Short: "Show all dependency edges",
+	Use:   "dependencies <asset>",
+	Short: "Show dependencies for an asset",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/topology/dependencies")
+		resp, err := c.Get("/api/v2/dependencies?asset_id=" + url.QueryEscape(args[0]))
 		if err != nil {
 			return err
 		}
@@ -30,14 +32,14 @@ var topologyDependenciesCmd = &cobra.Command{
 
 var topologyBlastRadiusCmd = &cobra.Command{
 	Use:   "blast-radius <asset>",
-	Short: "Show blast radius for an asset",
+	Short: "Show downstream edges for an asset",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/topology/blast-radius/" + pathSegment(args[0]))
+		resp, err := c.Get("/api/v2/edges/tree?root=" + url.QueryEscape(args[0]))
 		if err != nil {
 			return err
 		}
@@ -55,7 +57,7 @@ var topologyUpstreamCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/topology/upstream/" + pathSegment(args[0]))
+		resp, err := c.Get("/api/v2/edges/ancestors?id=" + url.QueryEscape(args[0]))
 		if err != nil {
 			return err
 		}
@@ -65,14 +67,15 @@ var topologyUpstreamCmd = &cobra.Command{
 }
 
 var topologyEdgesCmd = &cobra.Command{
-	Use:   "edges",
-	Short: "List all topology edges",
+	Use:   "edges <asset>",
+	Short: "List topology edges for an asset",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/topology/edges")
+		resp, err := c.Get("/api/v2/edges?asset_id=" + url.QueryEscape(args[0]))
 		if err != nil {
 			return err
 		}

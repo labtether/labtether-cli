@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -33,14 +34,14 @@ var psListCmd = &cobra.Command{
 		}
 
 		var processes []map[string]any
-		if err := decodeResponseData(resp, &processes); err != nil {
+		if err := decodeResponseList(resp, "processes", &processes); err != nil {
 			return err
 		}
 
 		fmt.Printf("%-8s %-8s %-6s %-6s %s\n", "PID", "USER", "CPU%", "MEM%", "COMMAND")
 		for _, p := range processes {
 			fmt.Printf("%-8v %-8v %-6v %-6v %v\n",
-				p["pid"], p["user"], p["cpu_percent"], p["mem_percent"], p["command"])
+				p["pid"], p["user"], p["cpu_pct"], p["mem_pct"], p["command"])
 		}
 		return nil
 	},
@@ -51,6 +52,10 @@ var psKillCmd = &cobra.Command{
 	Short: "Kill a process on an asset",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		pid, err := strconv.Atoi(args[1])
+		if err != nil || pid <= 0 {
+			return fmt.Errorf("pid must be a positive integer")
+		}
 		c, err := newClient()
 		if err != nil {
 			return err
@@ -58,7 +63,7 @@ var psKillCmd = &cobra.Command{
 
 		signal, _ := cmd.Flags().GetString("signal")
 		body := map[string]any{
-			"pid":    args[1],
+			"pid":    pid,
 			"signal": signal,
 		}
 

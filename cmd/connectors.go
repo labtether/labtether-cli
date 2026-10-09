@@ -38,12 +38,27 @@ var connectorsGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/connectors/" + pathSegment(args[0]))
+		resp, err := c.Get("/api/v2/connectors")
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		var result struct {
+			Connectors []struct {
+				ID           string          `json:"id"`
+				DisplayName  string          `json:"display_name"`
+				Capabilities json.RawMessage `json:"capabilities"`
+			} `json:"connectors"`
+		}
+		if err := json.Unmarshal(resp.Data, &result); err != nil || result.Connectors == nil {
+			return fmt.Errorf("decode connector list: invalid response")
+		}
+		for _, connector := range result.Connectors {
+			if connector.ID == args[0] {
+				printJSON(connector)
+				return nil
+			}
+		}
+		return fmt.Errorf("connector %q not found", args[0])
 	},
 }
 

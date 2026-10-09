@@ -33,15 +33,25 @@ var filesLsCmd = &cobra.Command{
 			return nil
 		}
 
-		var entries []map[string]any
-		if err := decodeResponseData(resp, &entries); err != nil {
+		var listing struct {
+			Entries []struct {
+				Name    string `json:"name"`
+				Size    int64  `json:"size"`
+				ModTime string `json:"mod_time"`
+				IsDir   bool   `json:"is_dir"`
+			} `json:"entries"`
+		}
+		if err := decodeResponseList(resp, "entries", &listing.Entries); err != nil {
 			return err
 		}
 
 		fmt.Printf("%-10s %-10s %-20s %s\n", "TYPE", "SIZE", "MODIFIED", "NAME")
-		for _, e := range entries {
-			fmt.Printf("%-10v %-10v %-20v %v\n",
-				e["type"], e["size"], e["modified"], e["name"])
+		for _, e := range listing.Entries {
+			kind := "file"
+			if e.IsDir {
+				kind = "directory"
+			}
+			fmt.Printf("%-10s %-10d %-20s %s\n", kind, e.Size, e.ModTime, e.Name)
 		}
 		return nil
 	},
@@ -57,20 +67,7 @@ var filesCatCmd = &cobra.Command{
 			return err
 		}
 
-		resp, err := c.Get(fmt.Sprintf("/api/v2/assets/%s/files/read?path=%s", pathSegment(args[0]), url.QueryEscape(args[1])))
-		if err != nil {
-			return err
-		}
-
-		var data map[string]any
-		if err := decodeResponseData(resp, &data); err != nil {
-			return err
-		}
-
-		if content, ok := data["content"].(string); ok {
-			fmt.Print(content)
-		}
-		return nil
+		return c.Download(fmt.Sprintf("/api/v2/assets/%s/files/read?path=%s", pathSegment(args[0]), url.QueryEscape(args[1])), cmd.OutOrStdout())
 	},
 }
 

@@ -65,19 +65,20 @@ var discoveryAcceptCmd = &cobra.Command{
 }
 
 var discoveryRejectCmd = &cobra.Command{
-	Use:   "reject <id>",
-	Short: "Reject a discovery proposal",
-	Args:  cobra.ExactArgs(1),
+	Use:     "dismiss <id>",
+	Aliases: []string{"reject"},
+	Short:   "Dismiss a discovery proposal",
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/discovery/proposals/%s/reject", pathSegment(args[0])), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/discovery/proposals/%s/dismiss", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Discovery proposal %s rejected\n", args[0])
+		fmt.Printf("Discovery proposal %s dismissed\n", args[0])
 		return nil
 	},
 }

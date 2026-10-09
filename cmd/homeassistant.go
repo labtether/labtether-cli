@@ -56,8 +56,8 @@ var haCallCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post("/api/v2/homeassistant/call",
-			map[string]string{"entity_id": args[0], "service": args[1]})
+		_, err = c.Post("/api/v2/homeassistant/entities/"+pathSegment(args[0]),
+			map[string]string{"action": "service.call", "service": args[1]})
 		if err != nil {
 			return err
 		}

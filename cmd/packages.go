@@ -58,7 +58,7 @@ var packagesUpdateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/update", pathSegment(args[0])), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/upgrade", pathSegment(args[0])), map[string]any{})
 		if err != nil {
 			return err
 		}

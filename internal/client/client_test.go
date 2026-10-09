@@ -82,6 +82,48 @@ func TestClientRejectsOversizedResponse(t *testing.T) {
 	}
 }
 
+type countingWriter struct{ n int64 }
+
+func (w *countingWriter) Write(data []byte) (int, error) {
+	w.n += int64(len(data))
+	return len(data), nil
+}
+
+func TestDownloadStreamsFilesLargerThanJSONLimit(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer test-key" {
+			t.Error("missing authorization")
+		}
+		chunk := make([]byte, 1024*1024)
+		for range 17 {
+			_, _ = w.Write(chunk)
+		}
+	}))
+	defer srv.Close()
+
+	var output countingWriter
+	if err := New(srv.URL, "test-key").Download("/api/v2/assets/agent/files/read", &output); err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	if output.n != 17*1024*1024 {
+		t.Fatalf("downloaded %d bytes", output.n)
+	}
+}
+
+func TestDownloadDoesNotWriteErrorBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]any{"message": "file missing"})
+	}))
+	defer srv.Close()
+
+	var output countingWriter
+	err := New(srv.URL, "test-key").Download("/api/v2/assets/agent/files/read", &output)
+	if err == nil || !strings.Contains(err.Error(), "file missing") || output.n != 0 {
+		t.Fatalf("error=%v, wrote %d bytes", err, output.n)
+	}
+}
+
 func TestClient_Get(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer test-key" {
