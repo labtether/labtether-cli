@@ -3,6 +3,9 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	"github.com/labtether/labtether-cli/internal/client"
 
 	"github.com/spf13/cobra"
 )
@@ -37,7 +40,7 @@ var proxmoxResourcesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/proxmox/resources")
+		resp, err := c.Get("/api/v2/proxmox/cluster/resources")
 		if err != nil {
 			return err
 		}
@@ -54,11 +57,23 @@ var proxmoxNodesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/proxmox/nodes")
+		resp, err := c.Get("/api/v2/proxmox/cluster/resources")
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
+		var resources struct {
+			Resources []map[string]any `json:"resources"`
+		}
+		if err := json.Unmarshal(resp.Data, &resources); err != nil {
+			return fmt.Errorf("decode Proxmox resources: %w", err)
+		}
+		nodes := make([]map[string]any, 0)
+		for _, resource := range resources.Resources {
+			if resource["type"] == "node" {
+				nodes = append(nodes, resource)
+			}
+		}
+		printJSON(nodes)
 		return nil
 	},
 }
@@ -72,7 +87,7 @@ var proxmoxGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/proxmox/vms/" + pathSegment(args[0]))
+		resp, err := c.Get("/api/v2/proxmox/assets/" + pathSegment(args[0]) + "/details")
 		if err != nil {
 			return err
 		}
@@ -90,11 +105,10 @@ var proxmoxStartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/proxmox/vms/%s/start", pathSegment(args[0])), nil)
-		if err != nil {
+		if err := requestProxmoxPowerAction(c, args[0], "start"); err != nil {
 			return err
 		}
-		fmt.Printf("VM %s start requested\n", args[0])
+		fmt.Printf("Proxmox asset %s started\n", args[0])
 		return nil
 	},
 }
@@ -108,11 +122,10 @@ var proxmoxStopCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/proxmox/vms/%s/stop", pathSegment(args[0])), nil)
-		if err != nil {
+		if err := requestProxmoxPowerAction(c, args[0], "stop"); err != nil {
 			return err
 		}
-		fmt.Printf("VM %s stop requested\n", args[0])
+		fmt.Printf("Proxmox asset %s stopped\n", args[0])
 		return nil
 	},
 }
@@ -126,11 +139,10 @@ var proxmoxRestartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/proxmox/vms/%s/restart", pathSegment(args[0])), nil)
-		if err != nil {
+		if err := requestProxmoxPowerAction(c, args[0], "reboot"); err != nil {
 			return err
 		}
-		fmt.Printf("VM %s restart requested\n", args[0])
+		fmt.Printf("Proxmox asset %s rebooted\n", args[0])
 		return nil
 	},
 }
@@ -164,4 +176,52 @@ func init() {
 		proxmoxCephStatusCmd,
 	)
 	rootCmd.AddCommand(proxmoxCmd)
+}
+
+func requestProxmoxPowerAction(c *client.Client, assetID, verb string) error {
+	c.HTTPClient.Timeout = hubLongActionTimeout
+	resp, err := c.Get("/api/v2/assets/" + pathSegment(assetID))
+	if err != nil {
+		return err
+	}
+	var details struct {
+		Asset struct {
+			Source string `json:"source"`
+			Type   string `json:"type"`
+		} `json:"asset"`
+	}
+	if err := json.Unmarshal(resp.Data, &details); err != nil {
+		return fmt.Errorf("decode asset details: %w", err)
+	}
+	if !strings.EqualFold(details.Asset.Source, "proxmox") {
+		return fmt.Errorf("asset %q is not a Proxmox asset", assetID)
+	}
+	prefix := ""
+	switch strings.ToLower(details.Asset.Type) {
+	case "vm":
+		prefix = "vm"
+	case "container":
+		prefix = "ct"
+	default:
+		return fmt.Errorf("asset %q is not a Proxmox VM or container", assetID)
+	}
+	actionID := prefix + "." + verb
+	result, err := c.Post("/api/v2/connectors/proxmox/actions/"+actionID+"/execute", map[string]string{"target_id": assetID})
+	if err != nil {
+		return err
+	}
+	var action struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(result.Data, &action); err != nil {
+		return fmt.Errorf("decode Proxmox action result: %w", err)
+	}
+	if !strings.EqualFold(action.Status, "succeeded") {
+		if action.Message != "" {
+			return fmt.Errorf("Proxmox action failed: %s", action.Message)
+		}
+		return fmt.Errorf("Proxmox action failed with status %q", action.Status)
+	}
+	return nil
 }

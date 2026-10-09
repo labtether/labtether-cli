@@ -20,7 +20,7 @@ var failoverListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/failover")
+		resp, err := c.Get("/api/v2/failover-pairs")
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ var failoverGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/failover/" + pathSegment(args[0]))
+		resp, err := c.Get("/api/v2/failover-pairs/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}
@@ -47,25 +47,25 @@ var failoverGetCmd = &cobra.Command{
 	},
 }
 
-var failoverTriggerCmd = &cobra.Command{
-	Use:   "trigger <id>",
-	Short: "Manually trigger a failover",
+var failoverReadinessCmd = &cobra.Command{
+	Use:   "check-readiness <id>",
+	Short: "Check whether a failover pair is ready",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/failover/%s/trigger", pathSegment(args[0])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/failover-pairs/%s/check-readiness", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Failover %s triggered\n", args[0])
+		printJSON(json.RawMessage(resp.Data))
 		return nil
 	},
 }
 
 func init() {
-	failoverCmd.AddCommand(failoverListCmd, failoverGetCmd, failoverTriggerCmd)
+	failoverCmd.AddCommand(failoverListCmd, failoverGetCmd, failoverReadinessCmd)
 	rootCmd.AddCommand(failoverCmd)
 }

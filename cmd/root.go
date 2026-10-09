@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -23,6 +24,10 @@ var (
 	cfgTLSCAFile  string
 	jsonOutput    bool
 )
+
+// Hub package actions can run for 10 minutes; Proxmox tasks can exceed five.
+// Leave room for response transfer without cancelling an in-flight action.
+const hubLongActionTimeout = 12 * time.Minute
 
 type config struct {
 	Host      string `json:"host"`
@@ -71,6 +76,21 @@ func outputResult(resp *client.V2Response, err error) error {
 func decodeResponseData(resp *client.V2Response, dst any) error {
 	if err := json.Unmarshal(resp.Data, dst); err != nil {
 		return fmt.Errorf("decode response data: %w", err)
+	}
+	return nil
+}
+
+func decodeResponseList(resp *client.V2Response, field string, dst any) error {
+	var data map[string]json.RawMessage
+	if err := decodeResponseData(resp, &data); err != nil {
+		return err
+	}
+	raw, found := data[field]
+	if !found {
+		return fmt.Errorf("decode response data: missing %s", field)
+	}
+	if err := json.Unmarshal(raw, dst); err != nil {
+		return fmt.Errorf("decode response data: %s: %w", field, err)
 	}
 	return nil
 }

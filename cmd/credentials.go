@@ -19,7 +19,7 @@ var credentialsListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/credentials")
+		resp, err := c.Get("/api/v2/credentials/profiles")
 		if err != nil {
 			return err
 		}
@@ -37,7 +37,7 @@ var credentialsGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/credentials/" + pathSegment(args[0]))
+		resp, err := c.Get("/api/v2/credentials/profiles/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}

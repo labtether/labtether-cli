@@ -19,7 +19,7 @@ var checksListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/checks")
+		resp, err := c.Get("/api/v2/synthetic-checks")
 		if err != nil {
 			return err
 		}
@@ -37,7 +37,7 @@ var checksGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/checks/" + pathSegment(args[0]))
+		resp, err := c.Get("/api/v2/synthetic-checks/" + pathSegment(args[0]))
 		if err != nil {
 			return err
 		}

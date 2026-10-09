@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/labtether/labtether-cli/internal/client"
 	"github.com/spf13/cobra"
 )
 
@@ -37,14 +38,14 @@ var dockerHostsCmd = &cobra.Command{
 		}
 
 		var hosts []map[string]any
-		if err := decodeResponseData(resp, &hosts); err != nil {
+		if err := decodeResponseList(resp, "hosts", &hosts); err != nil {
 			return err
 		}
 
-		fmt.Printf("%-20s %-10s %-10s %s\n", "HOST", "STATUS", "CONTAINERS", "VERSION")
+		fmt.Printf("%-20s %-10s %-10s %s\n", "HOST", "OS", "CONTAINERS", "VERSION")
 		for _, h := range hosts {
 			fmt.Printf("%-20v %-10v %-10v %v\n",
-				h["id"], h["status"], h["container_count"], h["docker_version"])
+				h["agent_id"], h["engine_os"], h["container_count"], h["engine_version"])
 		}
 		return nil
 	},
@@ -60,11 +61,7 @@ var dockerPsCmd = &cobra.Command{
 			return err
 		}
 
-		all, _ := cmd.Flags().GetBool("all")
 		path := fmt.Sprintf("/api/v2/docker/hosts/%s/containers", pathSegment(args[0]))
-		if all {
-			path += "?all=true"
-		}
 
 		resp, err := c.Get(path)
 		if err != nil {
@@ -77,7 +74,7 @@ var dockerPsCmd = &cobra.Command{
 		}
 
 		var containers []map[string]any
-		if err := decodeResponseData(resp, &containers); err != nil {
+		if err := decodeResponseList(resp, "containers", &containers); err != nil {
 			return err
 		}
 
@@ -99,7 +96,7 @@ var dockerStartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/docker/containers/%s/start", pathSegment(args[0])), nil)
+		err = requestDockerContainerAction(c, args[0], "start")
 		if err != nil {
 			return err
 		}
@@ -117,7 +114,7 @@ var dockerStopCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/docker/containers/%s/stop", pathSegment(args[0])), nil)
+		err = requestDockerContainerAction(c, args[0], "stop")
 		if err != nil {
 			return err
 		}
@@ -135,7 +132,7 @@ var dockerRestartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/docker/containers/%s/restart", pathSegment(args[0])), nil)
+		err = requestDockerContainerAction(c, args[0], "restart")
 		if err != nil {
 			return err
 		}
@@ -175,7 +172,7 @@ var dockerLogsCmd = &cobra.Command{
 }
 
 func init() {
-	dockerPsCmd.Flags().Bool("all", false, "Show all containers (including stopped)")
+	dockerPsCmd.Flags().Bool("all", false, "Accepted for compatibility; Hub already returns all containers")
 	dockerLogsCmd.Flags().Var(
 		newBoundedIntValue(100, "tail", "", minDockerLogTailLines, maxDockerLogTailLines),
 		"tail",
@@ -183,4 +180,28 @@ func init() {
 	)
 	dockerCmd.AddCommand(dockerHostsCmd, dockerPsCmd, dockerStartCmd, dockerStopCmd, dockerRestartCmd, dockerLogsCmd)
 	rootCmd.AddCommand(dockerCmd)
+}
+
+func requestDockerContainerAction(c *client.Client, containerID, verb string) error {
+	resp, err := c.Post(fmt.Sprintf("/api/v2/docker/containers/%s/action", pathSegment(containerID)),
+		map[string]string{"action": "container." + verb})
+	if err != nil {
+		return err
+	}
+	var data struct {
+		Result struct {
+			Status  string `json:"status"`
+			Message string `json:"message"`
+		} `json:"result"`
+	}
+	if err := decodeResponseData(resp, &data); err != nil {
+		return err
+	}
+	if data.Result.Status != "succeeded" {
+		if data.Result.Message != "" {
+			return fmt.Errorf("Docker action failed: %s", data.Result.Message)
+		}
+		return fmt.Errorf("Docker action failed with status %q", data.Result.Status)
+	}
+	return nil
 }

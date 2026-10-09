@@ -39,6 +39,7 @@ var packagesInstallCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		c.HTTPClient.Timeout = hubLongActionTimeout
 		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/install", pathSegment(args[0])),
 			map[string]string{"package": args[1]})
 		if err != nil {
@@ -58,7 +59,8 @@ var packagesUpdateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/update", pathSegment(args[0])), nil)
+		c.HTTPClient.Timeout = hubLongActionTimeout
+		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/upgrade", pathSegment(args[0])), map[string]any{})
 		if err != nil {
 			return err
 		}

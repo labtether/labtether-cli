@@ -107,17 +107,17 @@ func TestHumanOutputCommandsFailOnMalformedResponseData(t *testing.T) {
 		data any
 	}{
 		{
-			name: "docker hosts expects list",
+			name: "docker hosts expects hosts field",
 			args: []string{"docker", "hosts"},
 			data: map[string]any{"wrong": true},
 		},
 		{
-			name: "files cat expects object",
-			args: []string{"files", "cat", "asset-1", "/tmp/test.txt"},
-			data: []any{"wrong"},
+			name: "files ls expects entries field",
+			args: []string{"files", "ls", "asset-1", "/tmp"},
+			data: map[string]any{"wrong": true},
 		},
 		{
-			name: "ps list expects list",
+			name: "ps list expects processes field",
 			args: []string{"ps", "list", "asset-1"},
 			data: map[string]any{"wrong": true},
 		},

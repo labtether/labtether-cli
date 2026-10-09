@@ -20,7 +20,7 @@ var webServicesListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resp, err := c.Get("/api/v2/services/web")
+		resp, err := c.Get("/api/v2/web-services")
 		if err != nil {
 			return err
 		}
@@ -37,7 +37,7 @@ var webServicesSyncCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post("/api/v2/services/web/sync", nil)
+		_, err = c.Post("/api/v2/web-services/sync", nil)
 		if err != nil {
 			return err
 		}

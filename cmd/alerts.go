@@ -47,25 +47,25 @@ var alertsAckCmd = &cobra.Command{
 	},
 }
 
-var alertsSilenceCmd = &cobra.Command{
-	Use:   "silence <alert>",
-	Short: "Silence an alert",
+var alertsResolveCmd = &cobra.Command{
+	Use:   "resolve <alert>",
+	Short: "Resolve an alert",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/alerts/%s/silence", pathSegment(args[0])), nil)
+		_, err = c.Post(fmt.Sprintf("/api/v2/alerts/%s/resolve", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Alert %s silenced\n", args[0])
+		fmt.Printf("Alert %s resolved\n", args[0])
 		return nil
 	},
 }
 
 func init() {
-	alertsCmd.AddCommand(alertsListCmd, alertsAckCmd, alertsSilenceCmd)
+	alertsCmd.AddCommand(alertsListCmd, alertsAckCmd, alertsResolveCmd)
 	rootCmd.AddCommand(alertsCmd)
 }
