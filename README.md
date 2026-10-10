@@ -8,7 +8,7 @@
 
 Command-line interface for managing your [LabTether](https://labtether.com) hub.
 
-[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
+[![Go](https://img.shields.io/badge/Go-1.27.2+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 
 ---
 
