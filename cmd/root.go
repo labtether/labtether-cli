@@ -23,6 +23,7 @@ var (
 	cfgAPIKeyFile string
 	cfgTLSCAFile  string
 	jsonOutput    bool
+	configHomeDir = os.UserHomeDir
 )
 
 // Hub package actions can run for 10 minutes; Proxmox tasks can exceed five.
@@ -193,7 +194,7 @@ func readProtectedSecretFile(path string) (string, error) {
 }
 
 func configDir() string {
-	home, err := os.UserHomeDir()
+	home, err := configHomeDir()
 	if err != nil || home == "" {
 		return filepath.Join(os.TempDir(), "labtether")
 	}

@@ -75,7 +75,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26.9'
+          go-version: '1.27.2'
           cache: true
       - name: Check formatting
         run: |
@@ -99,7 +99,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26.9'
+          go-version: '1.27.2'
           cache: true
       - name: Build, archive, install, and execute the native CLI
         run: ./scripts/ci/installed-package-smoke.sh
@@ -129,7 +129,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26.9'
+          go-version: '1.27.2'
           cache: true
       - name: Cross-build ${{ matrix.goos }}/${{ matrix.goarch }}
         env:
@@ -149,7 +149,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26.9'
+          go-version: '1.27.2'
           cache: true
       - name: Run focused credential, permission, and TLS tests with race detection
         run: go test -race ./cmd ./internal/client

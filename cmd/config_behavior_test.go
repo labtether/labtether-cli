@@ -53,8 +53,7 @@ func TestNewClient_RefusesAPIKeyCommandLineArgument(t *testing.T) {
 
 func TestNewClient_EnvOverridesConfig(t *testing.T) {
 	// Put a dummy config so the file loader finds something
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	isolateConfig(t)
 	cfgHost = ""
 	cfgAPIKey = ""
 	t.Setenv("LABTETHER_HOST", "https://from-env.local")
@@ -73,8 +72,7 @@ func TestNewClient_EnvOverridesConfig(t *testing.T) {
 
 func TestConfigShow_NoConfig(t *testing.T) {
 	// Use a temp home so no real config file exists
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	isolateConfig(t)
 	t.Setenv("LABTETHER_HOST", "")
 	t.Setenv("LABTETHER_API_KEY", "")
 	cfgHost = ""
@@ -87,8 +85,7 @@ func TestConfigShow_NoConfig(t *testing.T) {
 }
 
 func TestConfigSetHost_SavesAndLoads(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	isolateConfig(t)
 	t.Setenv("LABTETHER_HOST", "")
 	t.Setenv("LABTETHER_API_KEY", "")
 	cfgHost = ""
@@ -107,8 +104,7 @@ func TestConfigSetHost_SavesAndLoads(t *testing.T) {
 }
 
 func TestConfigSetHost_NormalizesWhitespaceAndTrailingSlash(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	isolateConfig(t)
 	t.Setenv("LABTETHER_HOST", "")
 	t.Setenv("LABTETHER_API_KEY", "")
 	cfgHost = ""
@@ -126,8 +122,7 @@ func TestConfigSetHost_NormalizesWhitespaceAndTrailingSlash(t *testing.T) {
 }
 
 func TestConfigSetKey_SavesAndLoads(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	isolateConfig(t)
 	t.Setenv("LABTETHER_HOST", "")
 	t.Setenv("LABTETHER_API_KEY", "")
 	cfgHost = ""
@@ -203,8 +198,7 @@ func TestRedactSensitiveJSON(t *testing.T) {
 // ── saveConfig / loadConfig round-trip ───────────────────────────────────
 
 func TestSaveLoadConfig_RoundTrip(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	isolateConfig(t)
 	cfgHost = ""
 	cfgAPIKey = ""
 
@@ -223,8 +217,7 @@ func TestSaveLoadConfig_RoundTrip(t *testing.T) {
 }
 
 func TestLoadConfig_MissingFile(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	isolateConfig(t)
 	cfgHost = ""
 	cfgAPIKey = ""
 
@@ -235,8 +228,7 @@ func TestLoadConfig_MissingFile(t *testing.T) {
 }
 
 func TestLoadConfig_InvalidJSONReturnsError(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	isolateConfig(t)
 	if err := os.MkdirAll(configDir(), 0700); err != nil {
 		t.Fatalf("mkdir config dir: %v", err)
 	}
@@ -250,8 +242,7 @@ func TestLoadConfig_InvalidJSONReturnsError(t *testing.T) {
 }
 
 func TestConfigSetKeyRefusesInvalidExistingConfig(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	isolateConfig(t)
 	t.Setenv("LABTETHER_HOST", "")
 	t.Setenv("LABTETHER_API_KEY", "")
 	if err := os.MkdirAll(configDir(), 0700); err != nil {
@@ -277,8 +268,7 @@ func TestConfigSetKeyRefusesInvalidExistingConfig(t *testing.T) {
 }
 
 func TestNewClientAllowsEnvToBypassInvalidConfig(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	isolateConfig(t)
 	t.Setenv("LABTETHER_HOST", "https://env-hub.local")
 	t.Setenv("LABTETHER_API_KEY", "env-key")
 	cfgHost = ""
@@ -300,19 +290,11 @@ func TestNewClientAllowsEnvToBypassInvalidConfig(t *testing.T) {
 }
 
 func TestSaveConfig_FilePermissions(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	isolateConfig(t)
 
 	if err := saveConfig(config{Host: "h", APIKey: "k"}); err != nil {
 		t.Fatalf("saveConfig: %v", err)
 	}
 
-	info, err := os.Stat(configPath())
-	if err != nil {
-		t.Fatalf("stat config: %v", err)
-	}
-	// Config file should be owner-only (0600)
-	if perm := info.Mode().Perm(); perm != 0600 {
-		t.Errorf("config file permissions = %04o, want 0600", perm)
-	}
+	assertConfigProtection(t, configPath())
 }
