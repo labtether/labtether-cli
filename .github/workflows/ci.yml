@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'push' && github.ref_type == 'branch' && github.ref) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch') }}
+
 permissions:
   contents: read
 
@@ -24,7 +28,9 @@ jobs:
 
   qa-contracts:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
+      checks_required: ${{ steps.select.outputs.checks_required }}
       contracts: ${{ steps.select.outputs.contracts }}
       mode: ${{ steps.select.outputs.mode }}
     steps:
@@ -49,16 +55,21 @@ jobs:
             --head "${GITHUB_SHA}"
 
   build-and-test:
-    needs: [line-limit]
-    if: always()
+    needs: [line-limit, qa-contracts]
+    if: >-
+      !cancelled() && (needs.line-limit.result != 'success' ||
+      needs.qa-contracts.result != 'success' || needs.qa-contracts.outputs.checks_required != 'false')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Require source-size gate
+      - name: Require source-size and selection gates
         shell: bash
         env:
           LINE_LIMIT_RESULT: ${{ needs.line-limit.result }}
+          SELECTION_RESULT: ${{ needs.qa-contracts.result }}
         run: |
           test "${LINE_LIMIT_RESULT}" = success
+          test "${SELECTION_RESULT}" = success
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -79,7 +90,7 @@ jobs:
 
   installed-cli-package:
     needs: qa-contracts
-    if: contains(format(',{0},', needs.qa-contracts.outputs.contracts), ',installed-cli-package,')
+    if: needs.qa-contracts.outputs.checks_required != 'false' && contains(format(',{0},', needs.qa-contracts.outputs.contracts), ',installed-cli-package,')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -95,7 +106,7 @@ jobs:
 
   cross-platform-build:
     needs: qa-contracts
-    if: contains(format(',{0},', needs.qa-contracts.outputs.contracts), ',cross-platform-build,')
+    if: needs.qa-contracts.outputs.checks_required != 'false' && contains(format(',{0},', needs.qa-contracts.outputs.contracts), ',cross-platform-build,')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -129,7 +140,7 @@ jobs:
 
   tls-permission-behavior:
     needs: qa-contracts
-    if: contains(format(',{0},', needs.qa-contracts.outputs.contracts), ',tls-permission-behavior,')
+    if: needs.qa-contracts.outputs.checks_required != 'false' && contains(format(',{0},', needs.qa-contracts.outputs.contracts), ',tls-permission-behavior,')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

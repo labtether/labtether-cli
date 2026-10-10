@@ -52,9 +52,22 @@ if [[ "${mode}" == "auto" ]]; then
   else
     git -C "${repo_root}" diff \
       --name-only \
-      --diff-filter=ACMRTUXB \
+      --no-renames \
+      --diff-filter=ACDMRTUXB \
       "${base}" "${head}" > "${files_tmp}"
   fi
+fi
+
+# Only known prose can skip source checks; unknown paths and full runs keep them.
+checks_required=true
+if [[ "${mode}" == "auto" ]]; then
+  checks_required=false
+  while IFS= read -r changed_file; do
+    case "${changed_file}" in
+      README.md|CHANGELOG.md|AGENTS.md|CLAUDE.md|LICENSE|docs/*.md|notes/*.md) ;;
+      *) checks_required=true; break ;;
+    esac
+  done < "${files_tmp}"
 fi
 
 while IFS=$'\t' read -r contract_id path_glob reason extra; do
@@ -92,6 +105,7 @@ fi
 
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   {
+    echo "checks_required=${checks_required}"
     echo "contracts=${contracts}"
     echo "mode=${mode}"
   } >> "${GITHUB_OUTPUT}"
