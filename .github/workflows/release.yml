@@ -5,38 +5,52 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
-  artifact-metadata: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build-binaries:
+  # Reject malformed tags before any binary is built or attested.
+  check-tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require a vMAJOR.MINOR.PATCH tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "release tag ${TAG} must look like v1.2.3" >&2
+            exit 1
+          fi
+
+  build:
+    needs: check-tag
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     strategy:
+      fail-fast: true
       matrix:
         include:
-          - goos: linux
-            goarch: amd64
-            suffix: linux-amd64
-            archive: tar.gz
-          - goos: linux
-            goarch: arm64
-            suffix: linux-arm64
-            archive: tar.gz
-          - goos: darwin
-            goarch: amd64
-            suffix: darwin-amd64
-            archive: tar.gz
-          - goos: darwin
-            goarch: arm64
-            suffix: darwin-arm64
-            archive: tar.gz
-          - goos: windows
-            goarch: amd64
-            suffix: windows-amd64.exe
-            archive: zip
+          - { goos: linux, goarch: amd64, ext: "", archive: tar.gz }
+          - { goos: linux, goarch: arm64, ext: "", archive: tar.gz }
+          - { goos: darwin, goarch: amd64, ext: "", archive: tar.gz }
+          - { goos: darwin, goarch: arm64, ext: "", archive: tar.gz }
+          - { goos: windows, goarch: amd64, ext: ".exe", archive: zip }
+          - { goos: windows, goarch: arm64, ext: ".exe", archive: zip }
+    env:
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+      VERSION: ${{ github.ref_name }}
+      BINARY: labtether-cli-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+      ARCHIVE: labtether-cli-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.ref_name }}.${{ matrix.archive }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -47,53 +61,101 @@ jobs:
           go-version: "1.27.2"
 
       - name: Build CLI binary
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          SUFFIX: ${{ matrix.suffix }}
-          VERSION: ${{ github.ref_name }}
         run: |
+          mkdir -p out
           CGO_ENABLED=0 go build -trimpath \
             -ldflags="-s -w -X github.com/labtether/labtether-cli/cmd.version=${VERSION}" \
-            -o "labtether-cli-${SUFFIX}" \
+            -o "out/${BINARY}" \
             .
 
-      - name: Create tarball
-        if: matrix.archive == 'tar.gz'
-        env:
-          SUFFIX: ${{ matrix.suffix }}
-          VERSION: ${{ github.ref_name }}
+      - name: Package binary with license and readme
         run: |
-          tar czf "labtether-cli-${SUFFIX}-${VERSION}.tar.gz" "labtether-cli-${SUFFIX}"
-          sha256sum "labtether-cli-${SUFFIX}-${VERSION}.tar.gz" > "labtether-cli-${SUFFIX}-${VERSION}.tar.gz.sha256"
+          cp LICENSE README.md out/
+          cd out
+          if [[ "${ARCHIVE}" == *.zip ]]; then
+            zip -q -X "${ARCHIVE}" "${BINARY}" LICENSE README.md
+          else
+            tar -czf "${ARCHIVE}" "${BINARY}" LICENSE README.md
+          fi
+          rm LICENSE README.md
 
-      - name: Create zip
-        if: matrix.archive == 'zip'
-        env:
-          SUFFIX: ${{ matrix.suffix }}
-          VERSION: ${{ github.ref_name }}
-        run: |
-          zip "labtether-cli-${SUFFIX}-${VERSION}.zip" "labtether-cli-${SUFFIX}"
-          sha256sum "labtether-cli-${SUFFIX}-${VERSION}.zip" > "labtether-cli-${SUFFIX}-${VERSION}.zip.sha256"
-
-      - name: Checksum raw binary
-        env:
-          SUFFIX: ${{ matrix.suffix }}
-        run: |
-          sha256sum "labtether-cli-${SUFFIX}" > "labtether-cli-${SUFFIX}.sha256"
-
-      - name: Attest binary provenance
+      - name: Attest binary and archive provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
-          subject-path: labtether-cli-${{ matrix.suffix }}
+          subject-path: |
+            out/${{ env.BINARY }}
+            out/${{ env.ARCHIVE }}
 
-      - name: Upload release assets
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+      - name: Keep assets for the publish job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          files: |
-            labtether-cli-${{ matrix.suffix }}
-            labtether-cli-${{ matrix.suffix }}.sha256
-            labtether-cli-*.tar.gz
-            labtether-cli-*.tar.gz.sha256
-            labtether-cli-*.zip
-            labtether-cli-*.zip.sha256
+          name: cli-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Require a vMAJOR.MINOR.PATCH tag
+        run: |
+          if [[ ! "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "release tag ${TAG} must look like v1.2.3" >&2
+            exit 1
+          fi
+
+      - name: Collect every platform build
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: cli-*
+          path: dist
+          merge-multiple: true
+
+      - name: Check assets and write SHA256SUMS
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          expected=()
+          for target in linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
+            expected+=("labtether-cli-${target}" "labtether-cli-${target}-${TAG}.tar.gz")
+          done
+          for target in windows-amd64 windows-arm64; do
+            expected+=("labtether-cli-${target}.exe" "labtether-cli-${target}-${TAG}.zip")
+          done
+          for file in "${expected[@]}"; do
+            test -s "${file}" || { echo "missing release asset ${file}" >&2; exit 1; }
+          done
+          actual="$(find . -maxdepth 1 -type f | wc -l)"
+          if [[ "${actual}" -ne "${#expected[@]}" ]]; then
+            echo "expected ${#expected[@]} assets, found ${actual}" >&2
+            ls -la >&2
+            exit 1
+          fi
+          chmod +x labtether-cli-linux-amd64
+          reported="$(./labtether-cli-linux-amd64 --version)"
+          if [[ "${reported}" != "labtether-cli version ${TAG}" ]]; then
+            echo "built CLI reports '${reported}', expected version ${TAG}" >&2
+            exit 1
+          fi
+          printf '%s\n' "${expected[@]}" | LC_ALL=C sort | xargs sha256sum > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create or update the GitHub release once
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" --clobber labtether-cli-* SHA256SUMS
+          else
+            gh release create "${TAG}" --verify-tag --title "${TAG}" \
+              --notes "See CHANGELOG.md for changes. Verify downloads with SHA256SUMS and gh attestation verify." \
+              labtether-cli-* SHA256SUMS
+          fi

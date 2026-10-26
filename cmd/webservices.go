@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -37,11 +36,11 @@ var webServicesSyncCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post("/api/v2/web-services/sync", nil)
+		resp, err := c.Post("/api/v2/web-services/sync", nil)
 		if err != nil {
 			return err
 		}
-		fmt.Println("Web services sync started")
+		printMutationResult(resp, "Web services sync started\n")
 		return nil
 	},
 }

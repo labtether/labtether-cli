@@ -39,11 +39,11 @@ var servicesStartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/start", pathSegment(args[0]), pathSegment(args[1])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/start", pathSegment(args[0]), pathSegment(args[1])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Service %s started on %s\n", args[1], args[0])
+		printMutationResult(resp, "Service %s started on %s\n", args[1], args[0])
 		return nil
 	},
 }
@@ -57,11 +57,11 @@ var servicesStopCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/stop", pathSegment(args[0]), pathSegment(args[1])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/stop", pathSegment(args[0]), pathSegment(args[1])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Service %s stopped on %s\n", args[1], args[0])
+		printMutationResult(resp, "Service %s stopped on %s\n", args[1], args[0])
 		return nil
 	},
 }
@@ -75,11 +75,11 @@ var servicesRestartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/restart", pathSegment(args[0]), pathSegment(args[1])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/assets/%s/services/%s/restart", pathSegment(args[0]), pathSegment(args[1])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Service %s restarted on %s\n", args[1], args[0])
+		printMutationResult(resp, "Service %s restarted on %s\n", args[1], args[0])
 		return nil
 	},
 }

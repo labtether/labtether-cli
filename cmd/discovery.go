@@ -20,11 +20,11 @@ var discoveryRunCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post("/api/v2/discovery/run", nil)
+		resp, err := c.Post("/api/v2/discovery/run", nil)
 		if err != nil {
 			return err
 		}
-		fmt.Println("Discovery scan started")
+		printMutationResult(resp, "Discovery scan started\n")
 		return nil
 	},
 }
@@ -55,11 +55,11 @@ var discoveryAcceptCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/discovery/proposals/%s/accept", pathSegment(args[0])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/discovery/proposals/%s/accept", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Discovery proposal %s accepted\n", args[0])
+		printMutationResult(resp, "Discovery proposal %s accepted\n", args[0])
 		return nil
 	},
 }
@@ -74,11 +74,11 @@ var discoveryRejectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/discovery/proposals/%s/dismiss", pathSegment(args[0])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/discovery/proposals/%s/dismiss", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Discovery proposal %s dismissed\n", args[0])
+		printMutationResult(resp, "Discovery proposal %s dismissed\n", args[0])
 		return nil
 	},
 }
