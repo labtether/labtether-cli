@@ -44,7 +44,26 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() int {
-	if err := rootCmd.Execute(); err != nil {
+	return executeArgs(os.Args[1:])
+}
+
+func executeArgs(args []string) int {
+	rootCmd.SetArgs(args)
+	requestedJSON := requestsJSONOutput(args)
+	jsonResponseWritten = false
+	previousErrors, previousUsage := rootCmd.SilenceErrors, rootCmd.SilenceUsage
+	rootCmd.SilenceErrors, rootCmd.SilenceUsage = true, true
+	defer func() { rootCmd.SilenceErrors, rootCmd.SilenceUsage = previousErrors, previousUsage }()
+	executed, err := rootCmd.ExecuteC()
+	if err != nil {
+		if requestedJSON && executed != filesCatCmd && executed != dockerLogsCmd {
+			if !jsonResponseWritten {
+				printJSON(map[string]string{"error": err.Error()})
+			}
+		} else {
+			rootCmd.PrintErrln("Error:", err)
+			rootCmd.Println(executed.UsageString())
+		}
 		// Determine exit code based on error
 		errStr := err.Error()
 		switch {
@@ -59,19 +78,6 @@ func Execute() int {
 		}
 	}
 	return 0
-}
-
-func outputResult(resp *client.V2Response, err error) error {
-	if err != nil {
-		if jsonOutput {
-			printJSON(map[string]string{"error": err.Error()})
-		}
-		return err
-	}
-	if jsonOutput {
-		printJSON(json.RawMessage(resp.Data))
-	}
-	return nil
 }
 
 func decodeResponseData(resp *client.V2Response, dst any) error {
@@ -276,7 +282,8 @@ func saveConfig(cfg config) error {
 }
 
 func printJSON(v any) {
-	writeJSON(os.Stdout, v)
+	writeJSON(rootCmd.OutOrStdout(), v)
+	jsonResponseWritten = true
 }
 
 func writeJSON(w io.Writer, v any) {

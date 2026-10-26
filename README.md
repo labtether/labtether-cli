@@ -57,7 +57,7 @@ labtether-cli assets list
 | `docker` | Inspect Docker hosts and containers; start, stop, restart, and read container logs |
 | `files` | Browse directories and read remote files |
 | `ps` | List and manage processes on assets |
-| `alerts` | List, acknowledge, and silence alerts |
+| `alerts` | List, acknowledge, and resolve alerts |
 | `incidents` | View and manage incidents |
 | `updates` | Manage update plans and runs across fleet |
 | `connectors` | Inspect and test configured hub connectors (Proxmox, TrueNAS, etc.) |
@@ -73,7 +73,12 @@ labtether-cli assets list
 
 Run `labtether-cli --help` for the full command reference, or `labtether-cli <command> --help` for subcommand details.
 
-All commands support `--json` for machine-readable output.
+Use `--json` for machine-readable read and action results. Hub commands return
+the Hub's `data` payload; configuration changes return a small status object.
+Failures return a nonzero exit code and an `error` object if no result was
+already printed. A failed remote `exec` keeps its result and nonzero exit code.
+`files cat` always streams the original bytes and `docker logs` always prints
+log text, even when `--json` is set. Their errors stay on standard error.
 
 ---
 

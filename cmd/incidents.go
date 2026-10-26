@@ -57,11 +57,11 @@ var incidentsAckCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Patch(fmt.Sprintf("/api/v2/incidents/%s", pathSegment(args[0])), map[string]string{"status": "investigating"})
+		resp, err := c.Patch(fmt.Sprintf("/api/v2/incidents/%s", pathSegment(args[0])), map[string]string{"status": "investigating"})
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Incident %s moved to investigating\n", args[0])
+		printMutationResult(resp, "Incident %s moved to investigating\n", args[0])
 		return nil
 	},
 }
@@ -75,11 +75,11 @@ var incidentsResolveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Patch(fmt.Sprintf("/api/v2/incidents/%s", pathSegment(args[0])), map[string]string{"status": "resolved"})
+		resp, err := c.Patch(fmt.Sprintf("/api/v2/incidents/%s", pathSegment(args[0])), map[string]string{"status": "resolved"})
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Incident %s resolved\n", args[0])
+		printMutationResult(resp, "Incident %s resolved\n", args[0])
 		return nil
 	},
 }

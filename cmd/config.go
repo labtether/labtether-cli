@@ -30,7 +30,7 @@ var configSetHostCmd = &cobra.Command{
 		if err := saveConfig(cfg); err != nil {
 			return fmt.Errorf("save config: %w", err)
 		}
-		fmt.Printf("Hub host set to: %s\n", cfg.Host)
+		printStatusResult(map[string]string{"host": cfg.Host}, "Hub host set to: %s\n", cfg.Host)
 		return nil
 	},
 }
@@ -52,7 +52,7 @@ var configSetKeyCmd = &cobra.Command{
 		if err := saveConfig(cfg); err != nil {
 			return fmt.Errorf("save config: %w", err)
 		}
-		fmt.Println("API key saved.")
+		printStatusResult(map[string]bool{"saved": true}, "API key saved.\n")
 		return nil
 	},
 }
@@ -77,7 +77,7 @@ var configSetCACmd = &cobra.Command{
 		if err := saveConfig(cfg); err != nil {
 			return fmt.Errorf("save config: %w", err)
 		}
-		fmt.Printf("TLS CA file set to: %s\n", caFile)
+		printStatusResult(map[string]string{"tls_ca_file": caFile}, "TLS CA file set to: %s\n", caFile)
 		return nil
 	},
 }

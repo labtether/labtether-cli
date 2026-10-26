@@ -40,12 +40,12 @@ var packagesInstallCmd = &cobra.Command{
 			return err
 		}
 		c.HTTPClient.Timeout = hubLongActionTimeout
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/install", pathSegment(args[0])),
+		resp, err := c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/install", pathSegment(args[0])),
 			map[string]string{"package": args[1]})
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Package %s install requested on %s\n", args[1], args[0])
+		printMutationResult(resp, "Package %s install requested on %s\n", args[1], args[0])
 		return nil
 	},
 }
@@ -60,11 +60,11 @@ var packagesUpdateCmd = &cobra.Command{
 			return err
 		}
 		c.HTTPClient.Timeout = hubLongActionTimeout
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/upgrade", pathSegment(args[0])), map[string]any{})
+		resp, err := c.Post(fmt.Sprintf("/api/v2/assets/%s/packages/upgrade", pathSegment(args[0])), map[string]any{})
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Package update requested on %s\n", args[0])
+		printMutationResult(resp, "Package update requested on %s\n", args[0])
 		return nil
 	},
 }

@@ -90,9 +90,7 @@ func TestExecute_NoArgs_ReturnsZero(t *testing.T) {
 	t.Setenv("LABTETHER_API_KEY", "")
 	cfgHost = ""
 	cfgAPIKey = ""
-	rootCmd.SetArgs([]string{})
-
-	code := Execute()
+	code := executeArgs([]string{})
 	if code != 0 {
 		t.Errorf("Execute() with no args = %d, want 0 (shows help)", code)
 	}

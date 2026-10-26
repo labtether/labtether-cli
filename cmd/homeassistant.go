@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -56,12 +55,12 @@ var haCallCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post("/api/v2/homeassistant/entities/"+pathSegment(args[0]),
+		resp, err := c.Post("/api/v2/homeassistant/entities/"+pathSegment(args[0]),
 			map[string]string{"action": "service.call", "service": args[1]})
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Called service %s on entity %s\n", args[1], args[0])
+		printMutationResult(resp, "Called service %s on entity %s\n", args[1], args[0])
 		return nil
 	},
 }

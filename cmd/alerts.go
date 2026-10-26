@@ -38,11 +38,11 @@ var alertsAckCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/alerts/%s/ack", pathSegment(args[0])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/alerts/%s/ack", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Alert %s acknowledged\n", args[0])
+		printMutationResult(resp, "Alert %s acknowledged\n", args[0])
 		return nil
 	},
 }
@@ -56,11 +56,11 @@ var alertsResolveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/alerts/%s/resolve", pathSegment(args[0])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/alerts/%s/resolve", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Alert %s resolved\n", args[0])
+		printMutationResult(resp, "Alert %s resolved\n", args[0])
 		return nil
 	},
 }

@@ -43,11 +43,11 @@ var updatesPlansExecuteCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/updates/plans/%s/execute", pathSegment(args[0])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/updates/plans/%s/execute", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Update plan %s execution started\n", args[0])
+		printMutationResult(resp, "Update plan %s execution started\n", args[0])
 		return nil
 	},
 }

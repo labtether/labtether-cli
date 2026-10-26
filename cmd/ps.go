@@ -67,12 +67,12 @@ var psKillCmd = &cobra.Command{
 			"signal": signal,
 		}
 
-		_, err = c.Post("/api/v2/assets/"+pathSegment(args[0])+"/processes/kill", body)
+		resp, err := c.Post("/api/v2/assets/"+pathSegment(args[0])+"/processes/kill", body)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("Signal %s sent to PID %s on %s\n", signal, args[1], args[0])
+		printMutationResult(resp, "Signal %s sent to PID %s on %s\n", signal, args[1], args[0])
 		return nil
 	},
 }

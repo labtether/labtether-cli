@@ -96,11 +96,11 @@ var dockerStartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		err = requestDockerContainerAction(c, args[0], "start")
+		resp, err := requestDockerContainerAction(c, args[0], "start")
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Container %s started\n", args[0])
+		printMutationResult(resp, "Container %s started\n", args[0])
 		return nil
 	},
 }
@@ -114,11 +114,11 @@ var dockerStopCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		err = requestDockerContainerAction(c, args[0], "stop")
+		resp, err := requestDockerContainerAction(c, args[0], "stop")
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Container %s stopped\n", args[0])
+		printMutationResult(resp, "Container %s stopped\n", args[0])
 		return nil
 	},
 }
@@ -132,11 +132,11 @@ var dockerRestartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		err = requestDockerContainerAction(c, args[0], "restart")
+		resp, err := requestDockerContainerAction(c, args[0], "restart")
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Container %s restarted\n", args[0])
+		printMutationResult(resp, "Container %s restarted\n", args[0])
 		return nil
 	},
 }
@@ -165,7 +165,7 @@ var dockerLogsCmd = &cobra.Command{
 		}
 
 		if logs, ok := data["logs"].(string); ok {
-			fmt.Print(logs)
+			fmt.Fprint(cmd.OutOrStdout(), logs)
 		}
 		return nil
 	},
@@ -182,11 +182,11 @@ func init() {
 	rootCmd.AddCommand(dockerCmd)
 }
 
-func requestDockerContainerAction(c *client.Client, containerID, verb string) error {
+func requestDockerContainerAction(c *client.Client, containerID, verb string) (*client.V2Response, error) {
 	resp, err := c.Post(fmt.Sprintf("/api/v2/docker/containers/%s/action", pathSegment(containerID)),
 		map[string]string{"action": "container." + verb})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var data struct {
 		Result struct {
@@ -195,13 +195,13 @@ func requestDockerContainerAction(c *client.Client, containerID, verb string) er
 		} `json:"result"`
 	}
 	if err := decodeResponseData(resp, &data); err != nil {
-		return err
+		return nil, err
 	}
 	if data.Result.Status != "succeeded" {
 		if data.Result.Message != "" {
-			return fmt.Errorf("Docker action failed: %s", data.Result.Message)
+			return nil, fmt.Errorf("Docker action failed: %s", data.Result.Message)
 		}
-		return fmt.Errorf("Docker action failed with status %q", data.Result.Status)
+		return nil, fmt.Errorf("Docker action failed with status %q", data.Result.Status)
 	}
-	return nil
+	return resp, nil
 }

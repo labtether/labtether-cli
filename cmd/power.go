@@ -15,11 +15,11 @@ var rebootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/reboot", pathSegment(args[0])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/assets/%s/reboot", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Reboot requested for %s\n", args[0])
+		printMutationResult(resp, "Reboot requested for %s\n", args[0])
 		return nil
 	},
 }
@@ -33,11 +33,11 @@ var shutdownCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/shutdown", pathSegment(args[0])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/assets/%s/shutdown", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Shutdown requested for %s\n", args[0])
+		printMutationResult(resp, "Shutdown requested for %s\n", args[0])
 		return nil
 	},
 }
@@ -51,11 +51,11 @@ var wakeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post(fmt.Sprintf("/api/v2/assets/%s/wake", pathSegment(args[0])), nil)
+		resp, err := c.Post(fmt.Sprintf("/api/v2/assets/%s/wake", pathSegment(args[0])), nil)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Wake-on-LAN sent to %s\n", args[0])
+		printMutationResult(resp, "Wake-on-LAN sent to %s\n", args[0])
 		return nil
 	},
 }

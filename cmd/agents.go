@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -73,11 +72,11 @@ var agentsApproveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post("/api/v2/agents/pending/approve", map[string]string{"asset_id": args[0]})
+		resp, err := c.Post("/api/v2/agents/pending/approve", map[string]string{"asset_id": args[0]})
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Agent %s approved\n", args[0])
+		printMutationResult(resp, "Agent %s approved\n", args[0])
 		return nil
 	},
 }
@@ -91,11 +90,11 @@ var agentsRejectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = c.Post("/api/v2/agents/pending/reject", map[string]string{"asset_id": args[0]})
+		resp, err := c.Post("/api/v2/agents/pending/reject", map[string]string{"asset_id": args[0]})
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Agent %s rejected\n", args[0])
+		printMutationResult(resp, "Agent %s rejected\n", args[0])
 		return nil
 	},
 }
