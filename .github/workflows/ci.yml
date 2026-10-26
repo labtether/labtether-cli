@@ -49,10 +49,12 @@ jobs:
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" || "${GITHUB_REF_TYPE}" == "tag" ]]; then
             mode="full"
           fi
-          ./scripts/ci/select-qa-contracts.sh \
-            --mode "${mode}" \
-            --base "${BASE_SHA:-}" \
-            --head "${GITHUB_SHA}"
+          args=(--mode "${mode}" --head "${GITHUB_SHA}")
+          # Manual and tag runs have no base commit; omit it rather than pass "".
+          if [[ -n "${BASE_SHA:-}" ]]; then
+            args+=(--base "${BASE_SHA}")
+          fi
+          ./scripts/ci/select-qa-contracts.sh "${args[@]}"
 
   build-and-test:
     needs: [line-limit, qa-contracts]
