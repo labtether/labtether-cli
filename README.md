@@ -98,6 +98,10 @@ The CLI reads configuration from three sources, in order of priority:
 - **Documentation** -- [labtether.com/docs](https://labtether.com/docs)
 - **Website** -- [labtether.com](https://labtether.com)
 
+## Security
+
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
 ## License
 
-[Apache 2.0](LICENSE)
+Apache License 2.0. See [LICENSE](LICENSE).
