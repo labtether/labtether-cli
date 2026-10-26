@@ -18,7 +18,7 @@ Changes since v1.6.5.
   failures print one `error` object with a nonzero exit code. A failed remote
   `exec` keeps its result and exit code. `files cat` and `docker logs` still
   print raw output.
-- Built with Go 1.27.2 (was 1.26) and current stable dependencies.
+- Built with Go 1.27.3 (was 1.26) and current stable dependencies.
 
 ### Release assets
 
