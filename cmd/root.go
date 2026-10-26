@@ -276,8 +276,13 @@ func saveConfig(cfg config) error {
 }
 
 func printJSON(v any) {
-	data, _ := json.MarshalIndent(redactSensitiveJSON(v), "", "  ")
-	fmt.Println(string(data))
+	writeJSON(os.Stdout, v)
+}
+
+func writeJSON(w io.Writer, v any) {
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	_ = encoder.Encode(redactSensitiveJSON(v))
 }
 
 func redactSensitiveJSON(v any) any {
