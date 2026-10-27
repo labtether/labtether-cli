@@ -185,7 +185,9 @@ jobs:
           outputs = needs.get("qa-contracts", {}).get("outputs", {})
           checks = outputs.get("checks_required")
           mode = outputs.get("mode")
-          contracts = outputs.get("contracts")
+          # GitHub drops empty job outputs, so no selected contracts arrives
+          # as a missing key. checks_required and mode prove the selector ran.
+          contracts = outputs.get("contracts", "")
           contract_jobs = {"installed-cli-package", "cross-platform-build", "tls-permission-behavior"}
           if checks not in ("true", "false") or mode not in ("auto", "full"):
               errors.append("QA selector returned invalid checks_required or mode")

@@ -2,80 +2,53 @@
 
 <img src=".github/logo.svg" alt="LabTether" width="120" />
 
-</div>
-
 # LabTether CLI
 
-Command-line interface for managing your [LabTether](https://labtether.com) hub.
+**Run your [LabTether](https://github.com/labtether/labtether) homelab from the terminal.**
 
-[![Go](https://img.shields.io/badge/Go-1.27.3+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square)](LICENSE)
 
----
+</div>
+
+Do your day-to-day hub jobs from a shell: list your devices, run a command on
+a machine, restart a container, read logs or acknowledge an alert. Every
+command can print JSON, so it fits in scripts, cron jobs and AI agents too.
+
+```bash
+labtether-cli assets list
+labtether-cli exec <asset> "uptime"
+labtether-cli docker restart <container>
+labtether-cli alerts list --json
+```
 
 ## Install
 
-Each [release](https://github.com/labtether/labtether-cli/releases) has these
-assets (`vX.Y.Z` is the release tag):
+Download the file for your platform from the
+[latest release](https://github.com/labtether/labtether-cli/releases/latest)
+and put it on your `PATH` as `labtether-cli`. Builds are there for Linux,
+macOS and Windows on x86-64 and ARM64.
 
-| Platform | Binary | Archive (binary, `LICENSE`, `README.md`) |
-|:--|:--|:--|
-| Linux x86-64 | `labtether-cli-linux-amd64` | `labtether-cli-linux-amd64-vX.Y.Z.tar.gz` |
-| Linux ARM64 | `labtether-cli-linux-arm64` | `labtether-cli-linux-arm64-vX.Y.Z.tar.gz` |
-| macOS Intel | `labtether-cli-darwin-amd64` | `labtether-cli-darwin-amd64-vX.Y.Z.tar.gz` |
-| macOS Apple silicon | `labtether-cli-darwin-arm64` | `labtether-cli-darwin-arm64-vX.Y.Z.tar.gz` |
-| Windows x86-64 | `labtether-cli-windows-amd64.exe` | `labtether-cli-windows-amd64-vX.Y.Z.zip` |
-| Windows ARM64 | `labtether-cli-windows-arm64.exe` | `labtether-cli-windows-arm64-vX.Y.Z.zip` |
-| All | `SHA256SUMS` | SHA-256 checksums for every asset above |
+To check the download's checksum and GitHub attestation first, and for the extra step
+macOS needs for files downloaded in a browser, see
+[docs/install.md](docs/install.md).
 
-Download the file for your platform and `SHA256SUMS` from the same release,
-then check both the checksum and the GitHub build provenance:
-
-```bash
-VERSION=vX.Y.Z
-FILE=labtether-cli-linux-amd64
-gh release download "$VERSION" -R labtether/labtether-cli -p "$FILE" -p SHA256SUMS
-sha256sum --check --ignore-missing SHA256SUMS   # macOS: shasum -a 256 --check --ignore-missing SHA256SUMS
-gh attestation verify "$FILE" -R labtether/labtether-cli
-chmod +x "$FILE" && sudo mv "$FILE" /usr/local/bin/labtether-cli
-```
-
-On Windows PowerShell, compare `(Get-FileHash .\labtether-cli-windows-amd64.exe).Hash`
-with the matching line in `SHA256SUMS`.
-
-macOS binaries are not signed with an Apple Developer ID or notarized. If you
-download one with a web browser, Gatekeeper blocks it; after verifying the
-checksum, clear the quarantine flag:
-
-```bash
-xattr -d com.apple.quarantine labtether-cli-darwin-arm64
-```
-
-Files downloaded with `gh` or `curl` are not quarantined.
-
-Or install an exact version with Go:
+With Go installed, you can also run:
 
 ```bash
 go install github.com/labtether/labtether-cli@vX.Y.Z
 ```
 
----
-
-## Quick Start
+## Quick start
 
 ```bash
-# Configure your hub connection
 labtether-cli config set-host https://your-hub:8443
-labtether-cli config set-ca /path/to/labtether-ca.crt  # for the default private CA
-labtether-cli config set-key  # prompts without exposing the key in argv
-
-# Check who you are and what you can access
-labtether-cli whoami
-
-# View hub and fleet status
+labtether-cli config set-ca /path/to/labtether-ca.crt   # if your hub uses its own CA
+labtether-cli config set-key                            # asks for your API key
+labtether-cli whoami                                    # what this key can reach
 labtether-cli assets list
 ```
 
----
+Create the API key in the hub. Give it only the scopes you need.
 
 ## Commands
 
@@ -102,37 +75,36 @@ labtether-cli assets list
 | `config` | Manage CLI configuration (host, API key) |
 | `whoami` | Show API key info, scopes, and accessible assets |
 
-Run `labtether-cli --help` for the full command reference, or `labtether-cli <command> --help` for subcommand details.
+Run `labtether-cli --help` for everything, or `labtether-cli <command> --help`
+for one command.
 
-Use `--json` for machine-readable read and action results. Hub commands return
-the Hub's `data` payload; configuration changes return a small status object.
-Failures return a nonzero exit code and an `error` object if no result was
-already printed. A failed remote `exec` keeps its result and nonzero exit code.
+## JSON output
+
+Add `--json` to get machine-readable results. Hub commands print the hub's
+`data` payload, and config changes print a small status object. A failure
+exits nonzero and prints an `error` object, unless a result was already
+printed. A failed remote `exec` keeps its result and its nonzero exit code.
 `files cat` always streams the original bytes and `docker logs` always prints
-log text, even when `--json` is set. Their errors stay on standard error.
-
----
+log text, even with `--json`; their errors go to standard error.
 
 ## Configuration
 
-The CLI reads configuration from three sources, in order of priority:
+Settings are read in this order, first match wins:
 
-1. **Flags** -- `--host`, `--api-key-file`, and `--tls-ca-file` on any command
-2. **Environment variables** -- `LABTETHER_HOST`, `LABTETHER_API_KEY`, and `LABTETHER_TLS_CA_FILE`
-3. **Config file** -- `~/.config/labtether/config.json`, written by `config set-host`, `config set-ca`, and `config set-key`
+1. **Flags:** `--host`, `--api-key-file` and `--tls-ca-file` on any command
+2. **Environment:** `LABTETHER_HOST`, `LABTETHER_API_KEY` and `LABTETHER_TLS_CA_FILE`
+3. **Config file:** `~/.config/labtether/config.json`, written by `config set-host`, `config set-ca` and `config set-key`
 
----
+## Contributing
 
-## Links
+If you work with an AI coding agent, point it at [AGENTS.md](AGENTS.md) first.
+It covers the layout, the checks to run and the house rules.
 
-- **LabTether Hub** -- [github.com/labtether/labtether](https://github.com/labtether/labtether)
-- **Documentation** -- [labtether.com/docs](https://labtether.com/docs)
-- **Website** -- [labtether.com](https://labtether.com)
+## Help
 
-## Security
-
-Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+- [CLI guide](https://labtether.com/docs/gateway/cli), [LabTether docs](https://labtether.com/docs) and [GitHub Discussions](https://github.com/labtether/labtether/discussions)
+- Security issues: report privately as described in [SECURITY.md](SECURITY.md)
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE).
+[Apache 2.0](LICENSE). Copyright 2026 LabTether.
