@@ -159,3 +159,53 @@ jobs:
           cache: true
       - name: Run focused credential, permission, and TLS tests with race detection
         run: go test -race ./cmd ./internal/client
+
+  ci-result:
+    name: CI result
+    if: always()
+    needs: [line-limit, qa-contracts, build-and-test, installed-cli-package, cross-platform-build, tls-permission-behavior]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every selected check to pass
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          errors = []
+          for job in ("line-limit", "qa-contracts"):
+              if needs.get(job, {}).get("result") != "success":
+                  errors.append(f"{job} must succeed")
+
+          outputs = needs.get("qa-contracts", {}).get("outputs", {})
+          checks = outputs.get("checks_required")
+          mode = outputs.get("mode")
+          contracts = outputs.get("contracts")
+          contract_jobs = {"installed-cli-package", "cross-platform-build", "tls-permission-behavior"}
+          if checks not in ("true", "false") or mode not in ("auto", "full"):
+              errors.append("QA selector returned invalid checks_required or mode")
+          selected = set(contracts.split(",")) if isinstance(contracts, str) and contracts else set()
+          if not isinstance(contracts, str) or not selected <= contract_jobs:
+              errors.append("QA selector returned missing or unknown contracts")
+          if checks == "false" and selected:
+              errors.append("QA selector cannot skip checks with selected contracts")
+          if mode == "full" and (checks != "true" or selected != contract_jobs):
+              errors.append("Full QA must select every contract")
+
+          required = {"build-and-test": checks == "true"}
+          required.update({job: job in selected for job in contract_jobs})
+          for job, selected_job in required.items():
+              result = needs.get(job, {}).get("result")
+              allowed = ("success",) if selected_job else ("success", "skipped")
+              if result not in allowed:
+                  errors.append(f"{job}: {result!r}, expected {' or '.join(allowed)}")
+          if errors:
+              print("\n".join(errors), file=sys.stderr)
+              sys.exit(1)
+          print("Every selected CI check passed.")
+          PY
