@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"time"
 	"unicode"
 
 	"github.com/labtether/labtether-cli/internal/client"
@@ -93,6 +95,12 @@ func printTable(rows []map[string]any, columns ...tableColumn) {
 		fmt.Fprintln(w, strings.Join(cells, "\t"))
 	}
 	_ = w.Flush()
+}
+
+func sortRows(rows []map[string]any, key string) {
+	sort.SliceStable(rows, func(i, j int) bool {
+		return cellText(lookupPath(rows[i], key)) < cellText(lookupPath(rows[j], key))
+	})
 }
 
 func lookupPath(row map[string]any, path string) any {
@@ -189,4 +197,17 @@ func shortID(value any) string {
 		return text[:12]
 	}
 	return text
+}
+
+// timeText prints an RFC 3339 time as local minutes; other text is unchanged.
+func timeText(value any) string {
+	text := cellText(value)
+	parsed, err := time.Parse(time.RFC3339Nano, text)
+	if err != nil {
+		return text
+	}
+	if parsed.IsZero() {
+		return emptyCell
+	}
+	return parsed.Local().Format("2006-01-02 15:04")
 }

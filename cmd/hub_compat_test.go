@@ -20,7 +20,7 @@ func TestCommandsUseCurrentHubRoutes(t *testing.T) {
 		{"checks get", []string{"checks", "get", "check-1"}, "GET", "/api/v2/synthetic-checks/check-1", map[string]any{}},
 		{"credentials list", []string{"credentials", "list"}, "GET", "/api/v2/credentials/profiles", map[string]any{}},
 		{"credentials get", []string{"credentials", "get", "profile-1"}, "GET", "/api/v2/credentials/profiles/profile-1", map[string]any{}},
-		{"web services list", []string{"web-services", "list"}, "GET", "/api/v2/web-services", map[string]any{}},
+		{"web services list", []string{"web-services", "list"}, "GET", "/api/v2/web-services", map[string]any{"services": []any{}}},
 		{"web services sync", []string{"web-services", "sync"}, "POST", "/api/v2/web-services/sync", map[string]any{}},
 		{"tls status", []string{"tls", "status"}, "GET", "/api/v2/hub/tls", map[string]any{}},
 		{"failover list", []string{"failover", "list"}, "GET", "/api/v2/failover-pairs", map[string]any{}},

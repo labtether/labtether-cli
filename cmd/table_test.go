@@ -55,3 +55,44 @@ func TestTablesPrintWholeNumbersAndEmptyCells(t *testing.T) {
 		t.Fatalf("container ID not shortened: %q", stdout)
 	}
 }
+
+// Lab QA saw these list commands print raw JSON. They print a table, and
+// --json still prints the Hub payload for scripts.
+func TestListCommandsPrintTablesAndKeepJSON(t *testing.T) {
+	server := serveHubData(t, map[string]any{
+		"/api/v2/agents": map[string]any{"count": 1, "assets": []any{"node-1"},
+			"assetsInfo": []any{map[string]any{"id": "node-1", "platform": "linux", "has_tmux": true}}},
+		"/api/v2/assets/node-1/services": map[string]any{"request_id": "r1", "services": []any{map[string]any{
+			"name": "nginx.service", "description": "Web server", "active_state": "active",
+			"sub_state": "running", "enabled": "enabled", "load_state": "loaded",
+		}}},
+		"/api/v2/web-services": map[string]any{"services": []any{map[string]any{
+			"id": "ws-1", "name": "Grafana", "category": "Monitoring", "url": "http://192.0.2.10:3000",
+			"status": "up", "response_ms": 12, "host_asset_id": "node-1",
+		}}},
+	})
+	for _, tc := range []struct {
+		args   []string
+		header string
+		row    string
+	}{
+		{[]string{"agents", "list"}, "ID PLATFORM", "node-1 linux"},
+		{[]string{"services", "list", "node-1"}, "NAME ACTIVE SUB ENABLED DESCRIPTION", "nginx.service active running enabled Web server"},
+		{[]string{"web-services", "list"}, "NAME CATEGORY STATUS HOST URL", "Grafana Monitoring up node-1 http://192.0.2.10:3000"},
+	} {
+		t.Run(strings.Join(tc.args, " "), func(t *testing.T) {
+			stdout, _, err := runConfiguredCmd(t, server.URL, tc.args...)
+			lines := strings.Split(strings.TrimSpace(stdout), "\n")
+			if err != nil || len(lines) != 2 ||
+				strings.Join(strings.Fields(lines[0]), " ") != tc.header ||
+				strings.Join(strings.Fields(lines[1]), " ") != tc.row {
+				t.Fatalf("table output = %q, err = %v", stdout, err)
+			}
+			stdout, _, err = runConfiguredCmd(t, server.URL, append([]string{"--json"}, tc.args...)...)
+			var payload map[string]any
+			if err != nil || json.Unmarshal([]byte(stdout), &payload) != nil {
+				t.Fatalf("--json output = %q, err = %v", stdout, err)
+			}
+		})
+	}
+}
