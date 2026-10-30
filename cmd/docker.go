@@ -55,7 +55,7 @@ var dockerPsCmd = &cobra.Command{
 		}
 
 		return printList(resp, "containers",
-			col("CONTAINER ID", "id"), col("IMAGE", "image"), col("STATUS", "status"),
+			colFormat("CONTAINER ID", "id", shortID), col("IMAGE", "image"), col("STATUS", "status"),
 			col("PORTS", "ports"), col("NAME", "name"))
 	},
 }

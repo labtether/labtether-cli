@@ -180,3 +180,13 @@ func numberText(n json.Number) string {
 	}
 	return text
 }
+
+// shortID shortens a 64-character Docker ID to the 12 characters that
+// `docker ps` shows and the Hub accepts for container actions.
+func shortID(value any) string {
+	text := cellText(value)
+	if len(text) > 12 && strings.Trim(strings.ToLower(text), "0123456789abcdef") == "" {
+		return text[:12]
+	}
+	return text
+}
