@@ -60,8 +60,11 @@ var pbsSnapshotsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "snapshots",
+			col("TYPE", "backup_type"),
+			col("ID", "backup_id"),
+			colFormat("TIME", "backup_time", unixTimeText),
+			colFormat("SIZE", "size", byteSize))
 	},
 }
 

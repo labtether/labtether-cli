@@ -90,6 +90,14 @@ func TestHumanOutputCommandsAcceptHubListEnvelopes(t *testing.T) {
 		{"audit events", []string{"audit"}, map[string]any{"events": []any{}}},
 		{"hub agents", []string{"hub", "agents"}, map[string]any{"count": 0, "presence": []any{}}},
 		{"proxmox resources null", []string{"proxmox", "resources"}, map[string]any{"resources": nil}},
+		{"packages", []string{"packages", "list", "agent-1"}, map[string]any{"packages": []any{}, "request_id": "agent-request"}},
+		{"user sessions null", []string{"users", "agent-1"}, map[string]any{"sessions": nil, "request_id": "agent-request"}},
+		{"disk mounts null", []string{"disks", "agent-1"}, map[string]any{"mounts": nil, "request_id": "agent-request"}},
+		{"network interfaces null", []string{"net", "agent-1"}, map[string]any{"interfaces": nil, "request_id": "agent-request"}},
+		{"cron entries null", []string{"cron", "agent-1"}, map[string]any{"entries": nil, "request_id": "agent-request"}},
+		{"pbs snapshots", []string{"pbs", "snapshots", "pbs-1"}, map[string]any{"store": "main", "snapshots": []any{}}},
+		{"portainer stacks", []string{"portainer", "stacks", "env-1"}, map[string]any{"data": []any{}}},
+		{"portainer containers null", []string{"portainer", "containers", "env-1"}, map[string]any{"data": nil}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

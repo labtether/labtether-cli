@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-
 	"github.com/spf13/cobra"
 )
 
@@ -19,8 +17,12 @@ var netCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "interfaces",
+			col("NAME", "name"),
+			col("STATE", "state"),
+			col("MAC", "mac"),
+			col("MTU", "mtu"),
+			col("ADDRESSES", "ips"))
 	},
 }
 

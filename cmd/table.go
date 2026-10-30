@@ -241,3 +241,12 @@ func byteSize(value any) string {
 	}
 	return strconv.FormatFloat(size, 'f', 1, 64) + " " + units[unit]
 }
+
+// unixTimeText prints Unix seconds as local minutes.
+func unixTimeText(value any) string {
+	seconds, ok := numberValue(value)
+	if !ok || seconds <= 0 {
+		return cellText(value)
+	}
+	return time.Unix(int64(seconds), 0).Local().Format("2006-01-02 15:04")
+}

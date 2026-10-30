@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-
 	"github.com/spf13/cobra"
 )
 
@@ -19,8 +17,11 @@ var cronCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "entries",
+			col("SOURCE", "source"),
+			col("SCHEDULE", "schedule"),
+			col("USER", "user"),
+			col("COMMAND", "command"))
 	},
 }
 
