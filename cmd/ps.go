@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -28,22 +26,9 @@ var psListCmd = &cobra.Command{
 			return err
 		}
 
-		if jsonOutput {
-			printJSON(json.RawMessage(resp.Data))
-			return nil
-		}
-
-		var processes []map[string]any
-		if err := decodeResponseList(resp, "processes", &processes); err != nil {
-			return err
-		}
-
-		fmt.Printf("%-8s %-8s %-6s %-6s %s\n", "PID", "USER", "CPU%", "MEM%", "COMMAND")
-		for _, p := range processes {
-			fmt.Printf("%-8v %-8v %-6v %-6v %v\n",
-				p["pid"], p["user"], p["cpu_pct"], p["mem_pct"], p["command"])
-		}
-		return nil
+		return printList(resp, "processes",
+			col("PID", "pid"), col("USER", "user"), col("CPU%", "cpu_pct"),
+			col("MEM%", "mem_pct"), col("COMMAND", "command"))
 	},
 }
 

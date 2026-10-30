@@ -31,10 +31,10 @@ var whoamiCmd = &cobra.Command{
 			return fmt.Errorf("failed to parse response: %w", err)
 		}
 
-		fmt.Printf("Auth:     %v\n", data["auth_type"])
-		fmt.Printf("Role:     %v\n", data["role"])
+		fmt.Printf("Auth:     %s\n", cleanCell(cellText(data["auth_type"])))
+		fmt.Printf("Role:     %s\n", cleanCell(cellText(data["role"])))
 		if name, ok := data["key_name"]; ok {
-			fmt.Printf("Key:      %v\n", name)
+			fmt.Printf("Key:      %s\n", cleanCell(cellText(name)))
 		}
 		if scopes, ok := data["scopes"].([]any); ok {
 			fmt.Printf("Scopes:   ")
@@ -57,7 +57,7 @@ var whoamiCmd = &cobra.Command{
 				if asset["online"] == true {
 					status = "online"
 				}
-				fmt.Printf("  %-20s %-10s %s\n", asset["id"], asset["platform"], status)
+				fmt.Printf("  %-20s %-10s %s\n", cleanCell(cellText(asset["id"])), cleanCell(cellText(asset["platform"])), status)
 			}
 		}
 		return nil

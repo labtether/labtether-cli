@@ -36,22 +36,12 @@ var assetsListCmd = &cobra.Command{
 			return nil
 		}
 
-		var assets []map[string]any
-		if err := json.Unmarshal(resp.Data, &assets); err != nil {
+		assets, err := decodeRows(resp.Data)
+		if err != nil {
 			return fmt.Errorf("failed to parse response: %w", err)
 		}
-
-		fmt.Printf("%-20s %-10s %-10s %-16s %s\n", "ID", "PLATFORM", "STATUS", "IP", "NAME")
-		for _, a := range assets {
-			ip := ""
-			if meta, ok := a["metadata"].(map[string]any); ok {
-				if v, ok := meta["ip"].(string); ok {
-					ip = v
-				}
-			}
-			fmt.Printf("%-20s %-10v %-10v %-16s %v\n",
-				a["id"], a["platform"], a["status"], ip, a["name"])
-		}
+		printTable(assets, col("ID", "id"), col("PLATFORM", "platform"), col("STATUS", "status"),
+			col("IP", "metadata.ip"), col("NAME", "name"))
 		return nil
 	},
 }
