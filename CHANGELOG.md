@@ -2,6 +2,29 @@
 
 All notable changes to the LabTether CLI.
 
+## Unreleased
+
+Changes since v1.7.0.
+
+### Commands
+
+- List commands print a table instead of raw JSON: `agents list` and
+  `agents pending`, `services list`, `web-services list`, `search`, and the
+  alerts, checks, collectors, connectors, credentials, groups, failover,
+  incidents, updates, notifications, discovery, Home Assistant, audit,
+  `hub agents`, Proxmox, packages, users, disks, net, cron, PBS snapshots and
+  Portainer lists. `--json` output is unchanged. Single-item commands such as
+  `get` and `status` still print JSON.
+- Tables print whole numbers as integers (a PID of 1942945 no longer prints as
+  `1.942945e+06`), show `-` for a missing value instead of `<nil>`, and align
+  their columns.
+- `docker ps` shows the 12-character container ID. With a Hub that includes
+  labtether/labtether#234, `docker logs`, `start`, `stop` and `restart` accept
+  it.
+- `search` prints "No results." when nothing matches, instead of `{}`.
+- Usage text follows only command-line mistakes, such as a missing argument or
+  an unknown flag. Hub and network errors print the error alone.
+
 ## v1.7.0
 
 Changes since v1.6.5.
