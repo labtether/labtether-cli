@@ -54,7 +54,7 @@ var psKillCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pid, err := strconv.Atoi(args[1])
 		if err != nil || pid <= 0 {
-			return fmt.Errorf("pid must be a positive integer")
+			return usageErrorf("pid must be a positive integer")
 		}
 		c, err := newClient()
 		if err != nil {

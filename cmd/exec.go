@@ -37,13 +37,13 @@ var execCmd = &cobra.Command{
 		timeout, _ := cmd.Flags().GetInt("timeout")
 
 		if timeout < minExecTimeoutSeconds || timeout > maxExecTimeoutSeconds {
-			return fmt.Errorf("timeout must be between %d and %d seconds", minExecTimeoutSeconds, maxExecTimeoutSeconds)
+			return usageErrorf("timeout must be between %d and %d seconds", minExecTimeoutSeconds, maxExecTimeoutSeconds)
 		}
 		if targets == "" && group == "" && len(args) < 2 {
-			return fmt.Errorf("usage: labtether-cli exec <asset> <command>\n  or:  labtether-cli exec --targets a,b,c <command>\n  or:  labtether-cli exec --group <name> <command>")
+			return usageErrorf("an asset and a command are required, or --targets or --group with a command")
 		}
 		if (targets != "" || group != "") && len(args) < 1 {
-			return fmt.Errorf("command is required")
+			return usageErrorf("command is required")
 		}
 
 		c, err := newClient()

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -53,7 +52,7 @@ var groupsCreateCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name, _ := cmd.Flags().GetString("name")
 		if name == "" {
-			return fmt.Errorf("--name is required")
+			return usageErrorf("--name is required")
 		}
 		c, err := newClient()
 		if err != nil {
