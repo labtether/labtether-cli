@@ -23,8 +23,13 @@ var checksListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "checks",
+			col("ID", "id"),
+			col("NAME", "name"),
+			col("TYPE", "check_type"),
+			col("ENABLED", "enabled"),
+			col("LAST STATUS", "last_status"),
+			col("TARGET", "target"))
 	},
 }
 

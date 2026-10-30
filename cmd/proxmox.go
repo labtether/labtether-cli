@@ -44,8 +44,12 @@ var proxmoxResourcesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "resources",
+			col("ID", "id"),
+			col("TYPE", "type"),
+			col("NODE", "node"),
+			col("NAME", "name"),
+			col("STATUS", "status"))
 	},
 }
 
@@ -61,19 +65,34 @@ var proxmoxNodesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		var resources struct {
-			Resources []map[string]any `json:"resources"`
+		if jsonOutput {
+			var resources struct {
+				Resources []map[string]any `json:"resources"`
+			}
+			if err := json.Unmarshal(resp.Data, &resources); err != nil {
+				return fmt.Errorf("decode Proxmox resources: %w", err)
+			}
+			nodes := make([]map[string]any, 0)
+			for _, resource := range resources.Resources {
+				if resource["type"] == "node" {
+					nodes = append(nodes, resource)
+				}
+			}
+			printJSON(nodes)
+			return nil
 		}
-		if err := json.Unmarshal(resp.Data, &resources); err != nil {
-			return fmt.Errorf("decode Proxmox resources: %w", err)
+		resources, err := decodeTableRows(resp, "resources")
+		if err != nil {
+			return err
 		}
 		nodes := make([]map[string]any, 0)
-		for _, resource := range resources.Resources {
+		for _, resource := range resources {
 			if resource["type"] == "node" {
 				nodes = append(nodes, resource)
 			}
 		}
-		printJSON(nodes)
+		printTable(nodes, col("NODE", "node"), col("STATUS", "status"),
+			col("CPUS", "maxcpu"), colFormat("MEMORY", "maxmem", byteSize))
 		return nil
 	},
 }

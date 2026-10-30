@@ -23,8 +23,12 @@ var credentialsListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "profiles",
+			col("ID", "id"),
+			col("NAME", "name"),
+			col("KIND", "kind"),
+			col("USERNAME", "username"),
+			col("STATUS", "status"))
 	},
 }
 

@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-
 	"github.com/spf13/cobra"
 )
 
@@ -18,8 +16,12 @@ var auditCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "events",
+			colFormat("TIME", "timestamp", timeText),
+			col("TYPE", "type"),
+			col("ACTOR", "actor_id"),
+			col("TARGET", "target"),
+			col("DECISION", "decision"))
 	},
 }
 

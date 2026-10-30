@@ -23,8 +23,11 @@ var haEntitiesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "entities",
+			col("ENTITY", "metadata.entity_id"),
+			col("NAME", "name"),
+			col("STATE", "metadata.state"),
+			col("STATUS", "status"))
 	},
 }
 

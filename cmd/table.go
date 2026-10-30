@@ -211,3 +211,33 @@ func timeText(value any) string {
 	}
 	return parsed.Local().Format("2006-01-02 15:04")
 }
+
+func numberValue(value any) (float64, bool) {
+	switch v := value.(type) {
+	case json.Number:
+		f, err := v.Float64()
+		return f, err == nil
+	case float64:
+		return v, true
+	default:
+		return 0, false
+	}
+}
+
+// byteSize prints a byte count with binary units, such as 1.5 GiB.
+func byteSize(value any) string {
+	size, ok := numberValue(value)
+	if !ok {
+		return cellText(value)
+	}
+	units := []string{"B", "KiB", "MiB", "GiB", "TiB", "PiB"}
+	unit := 0
+	for size >= 1024 && unit < len(units)-1 {
+		size /= 1024
+		unit++
+	}
+	if unit == 0 {
+		return strconv.FormatFloat(size, 'f', 0, 64) + " B"
+	}
+	return strconv.FormatFloat(size, 'f', 1, 64) + " " + units[unit]
+}
