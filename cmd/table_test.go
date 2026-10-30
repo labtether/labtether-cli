@@ -96,3 +96,30 @@ func TestListCommandsPrintTablesAndKeepJSON(t *testing.T) {
 		})
 	}
 }
+
+// Lab QA saw `search` print {} when nothing matched.
+func TestSearchPrintsResultsOrNoResults(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		data map[string]any
+		want string
+	}{
+		{"no match", map[string]any{}, "No results."},
+		{"matches", map[string]any{
+			"assets": []any{map[string]any{"id": "nas01", "name": "nas01", "type": "asset", "status": "online", "platform": "linux"}},
+			"groups": []any{map[string]any{"id": "g1", "name": "Storage", "type": "group"}},
+		}, "TYPE ID NAME STATUS PLATFORM\nasset nas01 nas01 online linux\ngroup g1 Storage - -"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := serveHubData(t, map[string]any{"/api/v2/search": tc.data})
+			stdout, _, err := runConfiguredCmd(t, server.URL, "search", "nas")
+			lines := strings.Split(strings.TrimSpace(stdout), "\n")
+			for i, line := range lines {
+				lines[i] = strings.Join(strings.Fields(line), " ")
+			}
+			if err != nil || strings.Join(lines, "\n") != tc.want {
+				t.Fatalf("search output = %q, err = %v", stdout, err)
+			}
+		})
+	}
+}
