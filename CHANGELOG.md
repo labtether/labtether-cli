@@ -26,6 +26,12 @@ Changes since v1.7.0.
   always failed; it now reads the datastore list from the PBS details and
   prints STORE, STATUS, SIZE, USED, AVAIL, USE%, GROUPS, SNAPSHOTS and
   LAST BACKUP. `--json` prints that list.
+- `exec` reads the Hub's `status` to decide success and shows the exit code
+  only when the Hub reports one. It no longer stops with "missing exit_code"
+  when a command times out; it prints the Hub's output or reason instead. A
+  failed single-asset `exec` exits with the remote exit code when it is known
+  and between 1 and 255, otherwise 1. Older Hubs that send only `exit_code`
+  still work.
 - Usage text follows only command-line mistakes, such as a missing argument or
   an unknown flag. Hub and network errors print the error alone.
 

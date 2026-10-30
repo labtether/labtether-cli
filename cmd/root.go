@@ -68,6 +68,11 @@ func executeArgs(args []string) int {
 				rootCmd.Println(executed.UsageString())
 			}
 		}
+		// A failed remote command exits with its own code when known.
+		var remote remoteCommandError
+		if errors.As(err, &remote) {
+			return remote.exitCode
+		}
 		// Determine exit code based on error
 		errStr := err.Error()
 		switch {

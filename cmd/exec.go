@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -14,17 +13,6 @@ const (
 	minExecTimeoutSeconds = 1
 	maxExecTimeoutSeconds = 300
 )
-
-type remoteExecResult struct {
-	ExitCode *int   `json:"exit_code"`
-	Stdout   string `json:"stdout"`
-	Error    string `json:"error,omitempty"`
-	Message  string `json:"message,omitempty"`
-}
-
-type multiExecResponse struct {
-	Results map[string]remoteExecResult `json:"results"`
-}
 
 var execCmd = &cobra.Command{
 	Use:   "exec <asset> <command>",
@@ -87,34 +75,35 @@ var execCmd = &cobra.Command{
 			}
 			sort.Strings(targetNames)
 			for _, target := range targetNames {
-				if data.Results[target].ExitCode == nil {
-					return fmt.Errorf("multi-target result for %s is missing exit_code", target)
+				if !data.Results[target].known() {
+					return fmt.Errorf("multi-target result for %s is missing status and exit_code", target)
 				}
 			}
 			failed := 0
 			for _, target := range targetNames {
 				result := data.Results[target]
-				exitCode := *result.ExitCode
-				if result.Error != "" || exitCode != 0 {
+				if result.failed() {
 					failed++
 				}
 				if jsonOutput {
 					continue
 				}
-				if result.Error != "" {
-					message := strings.TrimSpace(result.Message)
-					if message == "" {
-						message = result.Error
-					}
-					fmt.Printf("[%s] Error: %s\n", target, message)
-				} else if exitCode != 0 {
-					fmt.Printf("[%s] Exit code %d: %s\n", target, exitCode, result.Stdout)
-				} else {
-					fmt.Printf("[%s] %s\n", target, result.Stdout)
+				switch {
+				case result.Error != "":
+					fmt.Fprintf(cmd.OutOrStdout(), "[%s] Error: %s\n", target, result.reason())
+				case result.failed() && result.ExitCode != nil:
+					fmt.Fprintf(cmd.OutOrStdout(), "[%s] Exit code %d: %s\n", target, *result.ExitCode, result.Stdout)
+				case result.failed():
+					fmt.Fprintf(cmd.OutOrStdout(), "[%s] Failed: %s\n", target, result.Stdout)
+				default:
+					fmt.Fprintf(cmd.OutOrStdout(), "[%s] %s\n", target, result.Stdout)
 				}
 			}
 			if failed > 0 {
-				return fmt.Errorf("%d of %d remote commands failed", failed, len(data.Results))
+				return remoteCommandError{
+					message:  fmt.Sprintf("%d of %d remote commands failed", failed, len(data.Results)),
+					exitCode: 1,
+				}
 			}
 			return nil
 		}
@@ -135,26 +124,16 @@ var execCmd = &cobra.Command{
 		if err := json.Unmarshal(resp.Data, &data); err != nil {
 			return fmt.Errorf("failed to parse response: %w", err)
 		}
-		if data.ExitCode == nil {
-			return fmt.Errorf("remote command response is missing exit_code")
+		if !data.known() {
+			return fmt.Errorf("remote command response is missing status and exit_code")
 		}
 		if jsonOutput {
 			printJSON(json.RawMessage(resp.Data))
 		} else if data.Stdout != "" {
-			fmt.Println(data.Stdout)
+			fmt.Fprintln(cmd.OutOrStdout(), data.Stdout)
 		}
-		if data.Error != "" {
-			message := strings.TrimSpace(data.Message)
-			if message == "" {
-				message = data.Error
-			}
-			return fmt.Errorf("remote command failed: %s", message)
-		}
-		if *data.ExitCode != 0 {
-			if !jsonOutput {
-				fmt.Fprintf(os.Stderr, "Exit code: %d\n", *data.ExitCode)
-			}
-			return fmt.Errorf("remote command failed with exit code %d", *data.ExitCode)
+		if data.failed() {
+			return data.failure()
 		}
 		return nil
 	},
