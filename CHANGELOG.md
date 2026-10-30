@@ -22,6 +22,10 @@ Changes since v1.7.0.
   labtether/labtether#234, `docker logs`, `start`, `stop` and `restart` accept
   it.
 - `search` prints "No results." when nothing matches, instead of `{}`.
+- `pbs datastores` works again. It called a Hub route that does not exist and
+  always failed; it now reads the datastore list from the PBS details and
+  prints STORE, STATUS, SIZE, USED, AVAIL, USE%, GROUPS, SNAPSHOTS and
+  LAST BACKUP. `--json` prints that list.
 - Usage text follows only command-line mistakes, such as a missing argument or
   an unknown flag. Hub and network errors print the error alone.
 

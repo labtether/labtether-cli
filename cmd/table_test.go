@@ -123,3 +123,25 @@ func TestSearchPrintsResultsOrNoResults(t *testing.T) {
 		})
 	}
 }
+
+// `pbs datastores` called /datastores, a route the Hub does not serve, so it
+// always failed with 404. The Hub returns the list in the details payload.
+func TestPBSDatastoresReadsDetailsList(t *testing.T) {
+	server := serveHubData(t, map[string]any{"/api/v2/pbs/assets/pbs-1/details": map[string]any{
+		"asset_id": "pbs-1", "kind": "server", "datastores": []any{map[string]any{
+			"store": "main", "status": "online", "total_bytes": 1099511627776, "used_bytes": 549755813888,
+			"avail_bytes": 549755813888, "usage_percent": 50, "group_count": 4, "snapshot_count": 120,
+		}},
+	}})
+	stdout, _, err := runConfiguredCmd(t, server.URL, "pbs", "datastores", "pbs-1")
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	if err != nil || len(lines) != 2 || strings.Join(strings.Fields(lines[1]), " ") !=
+		"main online 1.0 TiB 512.0 GiB 512.0 GiB 50 4 120 -" {
+		t.Fatalf("table output = %q, err = %v", stdout, err)
+	}
+	stdout, _, err = runConfiguredCmd(t, server.URL, "--json", "pbs", "datastores", "pbs-1")
+	var list []map[string]any
+	if err != nil || json.Unmarshal([]byte(stdout), &list) != nil || len(list) != 1 || list[0]["store"] != "main" {
+		t.Fatalf("--json output = %q, err = %v", stdout, err)
+	}
+}
