@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-
 	"github.com/spf13/cobra"
 )
 
@@ -19,8 +17,14 @@ var disksCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "mounts",
+			col("DEVICE", "device"),
+			col("MOUNT", "mount_point"),
+			col("TYPE", "fs_type"),
+			colFormat("SIZE", "total", byteSize),
+			colFormat("USED", "used", byteSize),
+			colFormat("AVAIL", "available", byteSize),
+			col("USE%", "use_pct"))
 	},
 }
 

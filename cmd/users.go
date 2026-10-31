@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-
 	"github.com/spf13/cobra"
 )
 
@@ -19,8 +17,11 @@ var usersCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "sessions",
+			col("USER", "username"),
+			col("TERMINAL", "terminal"),
+			col("FROM", "remote_host"),
+			colFormat("LOGIN", "login_time", timeText))
 	},
 }
 

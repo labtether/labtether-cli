@@ -48,9 +48,11 @@ func Execute() int {
 }
 
 func executeArgs(args []string) int {
+	trackCommandsStartOnce.Do(func() { trackCommandStart(rootCmd) })
 	rootCmd.SetArgs(args)
 	requestedJSON := requestsJSONOutput(args)
 	jsonResponseWritten = false
+	commandStarted = false
 	previousErrors, previousUsage := rootCmd.SilenceErrors, rootCmd.SilenceUsage
 	rootCmd.SilenceErrors, rootCmd.SilenceUsage = true, true
 	defer func() { rootCmd.SilenceErrors, rootCmd.SilenceUsage = previousErrors, previousUsage }()
@@ -62,7 +64,14 @@ func executeArgs(args []string) int {
 			}
 		} else {
 			rootCmd.PrintErrln("Error:", err)
-			rootCmd.Println(executed.UsageString())
+			if showsUsage(err) {
+				rootCmd.Println(executed.UsageString())
+			}
+		}
+		// A failed remote command exits with its own code when known.
+		var remote remoteCommandError
+		if errors.As(err, &remote) {
+			return remote.exitCode
 		}
 		// Determine exit code based on error
 		errStr := err.Error()

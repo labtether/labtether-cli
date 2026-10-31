@@ -24,8 +24,12 @@ var failoverListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "pairs",
+			col("ID", "id"),
+			col("NAME", "name"),
+			col("PRIMARY", "primary_group_id"),
+			col("BACKUP", "backup_group_id"),
+			col("READINESS", "readiness_score"))
 	},
 }
 

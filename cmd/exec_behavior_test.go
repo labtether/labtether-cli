@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -174,7 +175,43 @@ func TestExecCmd_RejectsMissingExitCode(t *testing.T) {
 	defer server.Close()
 
 	_, _, err := runConfiguredCmd(t, server.URL, "exec", "asset-a", "check")
-	if err == nil || !strings.Contains(err.Error(), "missing exit_code") {
-		t.Fatalf("missing exit_code should fail closed, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "missing status and exit_code") {
+		t.Fatalf("a result without status or exit_code should fail closed, got %v", err)
+	}
+}
+
+// The Hub release candidate sends status and leaves exit_code out when the
+// agent did not report one, as on a timeout. The CLI stopped at "missing
+// exit_code" and hid the Hub's output, and always exited 1. It now exits
+// with the remote code when known.
+func TestExecCmd_UsesHubStatusAndRemoteExitCode(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		result map[string]any
+		code   int
+		output string
+	}{
+		{"timeout without exit code", map[string]any{"status": "failed",
+			"stdout": "agent command timed out waiting for response; outcome unknown"}, 1, "outcome unknown"},
+		{"known exit code", map[string]any{"status": "failed", "exit_code": 2, "stdout": "no such file"}, 2, "exit code 2"},
+		{"success", map[string]any{"status": "succeeded", "exit_code": 0, "stdout": "ok"}, 0, "ok"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewEncoder(w).Encode(map[string]any{"data": tc.result})
+			}))
+			defer server.Close()
+			t.Setenv("LABTETHER_HOST", server.URL)
+			t.Setenv("LABTETHER_API_KEY", "test-key")
+			t.Setenv("LABTETHER_TLS_CA_FILE", "")
+			resetTestCommandState()
+			var stdout, stderr bytes.Buffer
+			rootCmd.SetOut(&stdout)
+			rootCmd.SetErr(&stderr)
+			code := executeArgs([]string{"exec", "node-1", "check"})
+			if output := stdout.String() + stderr.String(); code != tc.code || !strings.Contains(output, tc.output) {
+				t.Fatalf("exit code = %d, want %d; output = %q", code, tc.code, output)
+			}
+		})
 	}
 }

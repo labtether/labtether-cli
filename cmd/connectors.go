@@ -24,8 +24,9 @@ var connectorsListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "connectors",
+			col("ID", "id"),
+			col("NAME", "display_name"))
 	},
 }
 

@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-
 	"github.com/spf13/cobra"
 )
 
@@ -23,8 +21,11 @@ var notificationsChannelsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "channels",
+			col("ID", "id"),
+			col("NAME", "name"),
+			col("TYPE", "type"),
+			col("ENABLED", "enabled"))
 	},
 }
 
@@ -40,8 +41,13 @@ var notificationsHistoryCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "history",
+			col("ID", "id"),
+			col("CHANNEL", "channel_id"),
+			col("STATUS", "status"),
+			colFormat("SENT", "sent_at", timeText),
+			col("RETRIES", "retry_count"),
+			col("ERROR", "error"))
 	},
 }
 

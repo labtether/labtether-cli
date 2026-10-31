@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -25,8 +24,11 @@ var packagesListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "packages",
+			col("NAME", "name"),
+			col("VERSION", "version"),
+			col("AVAILABLE", "available_version"),
+			col("STATUS", "status"))
 	},
 }
 

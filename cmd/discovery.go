@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -41,8 +40,12 @@ var discoveryProposalsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "proposals",
+			col("ID", "id"),
+			col("SOURCE", "source_asset_id"),
+			col("TARGET", "target_asset_id"),
+			col("RELATIONSHIP", "relationship_type"),
+			col("CONFIDENCE", "confidence"))
 	},
 }
 
