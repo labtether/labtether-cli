@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/labtether/labtether-cli/internal/client"
@@ -32,22 +31,9 @@ var dockerHostsCmd = &cobra.Command{
 			return err
 		}
 
-		if jsonOutput {
-			printJSON(json.RawMessage(resp.Data))
-			return nil
-		}
-
-		var hosts []map[string]any
-		if err := decodeResponseList(resp, "hosts", &hosts); err != nil {
-			return err
-		}
-
-		fmt.Printf("%-20s %-10s %-10s %s\n", "HOST", "OS", "CONTAINERS", "VERSION")
-		for _, h := range hosts {
-			fmt.Printf("%-20v %-10v %-10v %v\n",
-				h["agent_id"], h["engine_os"], h["container_count"], h["engine_version"])
-		}
-		return nil
+		return printList(resp, "hosts",
+			col("HOST", "agent_id"), col("OS", "engine_os"),
+			col("CONTAINERS", "container_count"), col("VERSION", "engine_version"))
 	},
 }
 
@@ -68,22 +54,9 @@ var dockerPsCmd = &cobra.Command{
 			return err
 		}
 
-		if jsonOutput {
-			printJSON(json.RawMessage(resp.Data))
-			return nil
-		}
-
-		var containers []map[string]any
-		if err := decodeResponseList(resp, "containers", &containers); err != nil {
-			return err
-		}
-
-		fmt.Printf("%-14s %-25s %-12s %-10s %s\n", "CONTAINER ID", "IMAGE", "STATUS", "PORTS", "NAME")
-		for _, ct := range containers {
-			fmt.Printf("%-14v %-25v %-12v %-10v %v\n",
-				ct["id"], ct["image"], ct["status"], ct["ports"], ct["name"])
-		}
-		return nil
+		return printList(resp, "containers",
+			colFormat("CONTAINER ID", "id", shortID), col("IMAGE", "image"), col("STATUS", "status"),
+			col("PORTS", "ports"), col("NAME", "name"))
 	},
 }
 

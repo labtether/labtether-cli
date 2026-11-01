@@ -101,7 +101,7 @@ func TestExecuteJSONFailuresEmitOneResultAndKeepExitCode(t *testing.T) {
 		{"auth", []string{"alerts", "ack", "alert-1"}, 403, `{"error":"forbidden","message":"scope denied"}`, 2, "error"},
 		{"not found", []string{"services", "restart", "asset-1", "nginx"}, 404, `{"error":"not_found"}`, 3, "error"},
 		{"action failed", []string{"docker", "restart", "container-1"}, 200, `{"data":{"result":{"status":"failed","message":"engine denied"}}}`, 1, "error"},
-		{"remote exec failed", []string{"exec", "asset-1", "false"}, 200, `{"data":{"exit_code":7,"stdout":"partial output"}}`, 1, "exit_code"},
+		{"remote exec failed", []string{"exec", "asset-1", "false"}, 200, `{"data":{"exit_code":7,"stdout":"partial output"}}`, 7, "exit_code"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

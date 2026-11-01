@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -24,8 +23,12 @@ var alertsListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "instances",
+			col("ID", "id"),
+			col("SEVERITY", "severity"),
+			col("STATUS", "status"),
+			colFormat("STARTED", "started_at", timeText),
+			col("RULE", "rule_id"))
 	},
 }
 

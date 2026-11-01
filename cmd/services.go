@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -25,8 +24,9 @@ var servicesListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "services",
+			col("NAME", "name"), col("ACTIVE", "active_state"), col("SUB", "sub_state"),
+			col("ENABLED", "enabled"), col("DESCRIPTION", "description"))
 	},
 }
 

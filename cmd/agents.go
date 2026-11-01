@@ -23,7 +23,16 @@ var agentsListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
+		if jsonOutput {
+			printJSON(json.RawMessage(resp.Data))
+			return nil
+		}
+		agents, err := decodeTableRows(resp, "assetsInfo")
+		if err != nil {
+			return err
+		}
+		sortRows(agents, "id")
+		printTable(agents, col("ID", "id"), col("PLATFORM", "platform"))
 		return nil
 	},
 }
@@ -58,8 +67,10 @@ var agentsPendingCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "agents",
+			col("ID", "asset_id"), col("HOSTNAME", "hostname"), col("PLATFORM", "platform"),
+			col("IP", "remote_ip"), colFormat("CONNECTED", "connected_at", timeText),
+			col("VERIFIED", "identity_verified"))
 	},
 }
 

@@ -24,8 +24,12 @@ var incidentsListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "incidents",
+			col("ID", "id"),
+			col("SEVERITY", "severity"),
+			col("STATUS", "status"),
+			colFormat("OPENED", "opened_at", timeText),
+			col("TITLE", "title"))
 	},
 }
 

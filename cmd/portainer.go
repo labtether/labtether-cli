@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -42,8 +43,10 @@ var portainerStacksCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "data",
+			col("ID", "Id"),
+			col("NAME", "Name"),
+			colFormat("STATUS", "Status", portainerStackStatus))
 	},
 }
 
@@ -60,12 +63,41 @@ var portainerContainersCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "data",
+			colFormat("ID", "Id", shortID),
+			colFormat("NAME", "Names", containerNames),
+			col("IMAGE", "Image"),
+			col("STATE", "State"),
+			col("STATUS", "Status"))
 	},
 }
 
 func init() {
 	portainerCmd.AddCommand(portainerGetCmd, portainerStacksCmd, portainerContainersCmd)
 	rootCmd.AddCommand(portainerCmd)
+}
+
+// Portainer reports stack status as a number: 1 is active, 2 is inactive.
+func portainerStackStatus(value any) string {
+	switch text := cellText(value); text {
+	case "1":
+		return "active"
+	case "2":
+		return "inactive"
+	default:
+		return text
+	}
+}
+
+// Docker lists container names with a leading slash, such as "/web".
+func containerNames(value any) string {
+	names, ok := value.([]any)
+	if !ok {
+		return cellText(value)
+	}
+	trimmed := make([]any, len(names))
+	for i, name := range names {
+		trimmed[i] = strings.TrimPrefix(cellText(name), "/")
+	}
+	return cellText(trimmed)
 }

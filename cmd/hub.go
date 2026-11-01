@@ -40,8 +40,11 @@ var hubAgentsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "presence",
+			col("ASSET", "asset_id"),
+			col("TRANSPORT", "transport"),
+			colFormat("CONNECTED", "connected_at", timeText),
+			colFormat("LAST HEARTBEAT", "last_heartbeat_at", timeText))
 	},
 }
 

@@ -29,8 +29,11 @@ var updatesPlansListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "plans",
+			col("ID", "id"),
+			col("NAME", "name"),
+			col("DRY RUN", "default_dry_run"),
+			col("TARGETS", "targets"))
 	},
 }
 
@@ -69,8 +72,12 @@ var updatesRunsListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "runs",
+			col("ID", "id"),
+			col("PLAN", "plan_name"),
+			col("STATUS", "status"),
+			col("DRY RUN", "dry_run"),
+			colFormat("CREATED", "created_at", timeText))
 	},
 }
 

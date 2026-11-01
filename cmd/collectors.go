@@ -23,8 +23,13 @@ var collectorsListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printJSON(json.RawMessage(resp.Data))
-		return nil
+		return printList(resp, "collectors",
+			col("ID", "id"),
+			col("TYPE", "collector_type"),
+			col("ASSET", "asset_id"),
+			col("ENABLED", "enabled"),
+			col("LAST STATUS", "last_status"),
+			colFormat("LAST RUN", "last_collected_at", timeText))
 	},
 }
 
