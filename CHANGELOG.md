@@ -23,6 +23,10 @@ routes as Hub v1.7.1.
   table did not show it.
 - `exec --group` help says it takes a group ID, as shown by `groups list`. The
   Hub matches the group by ID, never by name.
+- `exec` says how to pass a remote command's own flags. `exec srv1 df -h`
+  printed help, ran nothing and exited 0; `exec srv1 free -m` failed with only
+  "unknown shorthand flag". Both now exit 1 and say to quote the command or
+  put it after `--`, as in `exec srv1 -- df -h`.
 
 ### Install
 

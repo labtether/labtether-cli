@@ -215,3 +215,44 @@ func TestExecCmd_UsesHubStatusAndRemoteExitCode(t *testing.T) {
 		})
 	}
 }
+
+// A remote command's own flags (df -h) must reach the asset when given after
+// --. Without --, "-h" used to print help and exit 0 without running anything,
+// and other flags failed with no hint; both must exit nonzero and explain --.
+func TestExecCmd_RemoteCommandFlags(t *testing.T) {
+	var commands []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Command string `json:"command"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		commands = append(commands, body.Command)
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"stdout": "ok", "exit_code": 0}})
+	}))
+	defer server.Close()
+	t.Setenv("LABTETHER_HOST", server.URL)
+	t.Setenv("LABTETHER_API_KEY", "test-key")
+	t.Setenv("LABTETHER_TLS_CA_FILE", "")
+
+	for _, tc := range []struct {
+		args []string
+		code int
+	}{
+		{[]string{"exec", "asset-1", "--", "df", "-h"}, 0},
+		{[]string{"exec", "asset-1", "df", "-h"}, 1},
+		{[]string{"exec", "asset-1", "free", "-m"}, 1},
+	} {
+		resetTestCommandState()
+		var stdout, stderr bytes.Buffer
+		rootCmd.SetOut(&stdout)
+		rootCmd.SetErr(&stderr)
+		code := executeArgs(tc.args)
+		output := stdout.String() + stderr.String()
+		if code != tc.code || (tc.code != 0 && !strings.Contains(output, "put it after --")) {
+			t.Fatalf("args=%v: exit code = %d, want %d; output = %q", tc.args, code, tc.code, output)
+		}
+	}
+	if len(commands) != 1 || commands[0] != "df -h" {
+		t.Fatalf("remote commands = %q, want only %q", commands, "df -h")
+	}
+}
