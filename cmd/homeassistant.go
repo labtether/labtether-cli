@@ -24,6 +24,7 @@ var haEntitiesCmd = &cobra.Command{
 			return err
 		}
 		return printList(resp, "entities",
+			col("ID", "id"),
 			col("ENTITY", "metadata.entity_id"),
 			col("NAME", "name"),
 			col("STATE", "metadata.state"),
@@ -33,7 +34,7 @@ var haEntitiesCmd = &cobra.Command{
 
 var haEntityCmd = &cobra.Command{
 	Use:   "entity <id>",
-	Short: "Get a Home Assistant entity by ID",
+	Short: "Get a Home Assistant entity by its ID, as shown by ha entities",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -50,8 +51,8 @@ var haEntityCmd = &cobra.Command{
 }
 
 var haCallCmd = &cobra.Command{
-	Use:   "call <entity> <service>",
-	Short: "Call a Home Assistant service on an entity",
+	Use:   "call <id> <service>",
+	Short: "Call a Home Assistant service, such as switch.turn_on, on an entity",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
