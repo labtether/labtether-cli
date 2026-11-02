@@ -32,11 +32,9 @@ To check the download's checksum and GitHub attestation first, and for the extra
 macOS needs for files downloaded in a browser, see
 [docs/install.md](docs/install.md).
 
-With Go installed, you can also run:
-
-```bash
-go install github.com/labtether/labtether-cli@vX.Y.Z
-```
+To build from source with Go instead, see
+[Build from source](docs/install.md#build-from-source). `go install` does not
+install v2 releases.
 
 ## Quick start
 

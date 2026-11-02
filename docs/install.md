@@ -38,8 +38,19 @@ xattr -d com.apple.quarantine labtether-cli-darwin-arm64
 
 Files downloaded with `gh` or `curl` are not quarantined.
 
-Or install an exact version with Go:
+## Build from source
+
+`go install github.com/labtether/labtether-cli@...` does not install v2
+releases. The module path has no `/v2` suffix, so Go ignores the v2 tags:
+`@latest` installs v1.7.1 and `@v2.0.0` fails. Build the release tag from a
+clone instead, with Go 1.27.3 or later:
 
 ```bash
-go install github.com/labtether/labtether-cli@vX.Y.Z
+VERSION=vX.Y.Z
+git clone --depth 1 --branch "$VERSION" https://github.com/labtether/labtether-cli
+cd labtether-cli
+go build -trimpath -ldflags "-X github.com/labtether/labtether-cli/cmd.version=$VERSION" -o labtether-cli .
+./labtether-cli --version
 ```
+
+Without the `-ldflags` value, `--version` prints `dev`.

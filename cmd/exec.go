@@ -141,7 +141,7 @@ var execCmd = &cobra.Command{
 
 func init() {
 	execCmd.Flags().String("targets", "", "Comma-separated list of asset IDs for multi-target exec")
-	execCmd.Flags().String("group", "", "Group name for multi-target exec")
+	execCmd.Flags().String("group", "", "Group ID, as shown by groups list, for multi-target exec")
 	execCmd.Flags().Var(
 		newBoundedIntValue(30, "timeout", "seconds", minExecTimeoutSeconds, maxExecTimeoutSeconds),
 		"timeout",

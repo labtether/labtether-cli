@@ -2,7 +2,36 @@
 
 All notable changes to the LabTether CLI.
 
-## Unreleased
+## v2.0.0
+
+Changes since v1.7.1. The CLI takes the LabTether 2.0 version with the Hub and
+agents. Apart from the changes below, commands, flags, output and exit codes
+are the same as in v1.7.1. The CLI works with Hub 2.0, whose API has the same
+routes as Hub v1.7.1.
+
+### Commands
+
+- `connectors test` works again. It sent no connection settings, so the Hub
+  answered "invalid test payload" for every connector except Docker. It now
+  tests the saved connection for the connector, such as
+  `connectors test proxmox`, using the connection's address and stored
+  credential; no secret passes through the CLI. When a connector has more
+  than one saved connection, the error lists their collector IDs and
+  `connectors test <collector-id>` tests one.
+- `ha entities` shows each entity's ID first. `ha entity` and `ha call` take
+  that ID, not the Home Assistant entity name such as `switch.office`, and the
+  table did not show it.
+- `exec --group` help says it takes a group ID, as shown by `groups list`. The
+  Hub matches the group by ID, never by name.
+
+### Install
+
+- `go install github.com/labtether/labtether-cli@...` does not install v2
+  releases, because the module path has no `/v2` suffix: `@latest` stays on
+  v1.7.1 and `@v2.0.0` fails. The README and `docs/install.md` now show how to
+  build a release tag from source instead. Release downloads are unchanged.
+
+## v1.7.1
 
 Changes since v1.7.0.
 
