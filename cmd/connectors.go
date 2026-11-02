@@ -64,15 +64,21 @@ var connectorsGetCmd = &cobra.Command{
 }
 
 var connectorsTestCmd = &cobra.Command{
-	Use:   "test <id>",
-	Short: "Test a connector connection",
-	Args:  cobra.ExactArgs(1),
+	Use:   "test <connector-or-collector-id>",
+	Short: "Test a saved connector connection",
+	Long: "Test the saved connection for a connector, such as proxmox or truenas. " +
+		"When a connector has more than one saved connection, give its collector ID, as shown by collectors list.",
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
 			return err
 		}
-		resp, err := c.Post(fmt.Sprintf("/api/v2/connectors/%s/test", pathSegment(args[0])), nil)
+		connector, body, err := connectorTestRequest(c, args[0])
+		if err != nil {
+			return err
+		}
+		resp, err := c.Post(fmt.Sprintf("/api/v2/connectors/%s/test", pathSegment(connector)), body)
 		if err != nil {
 			return err
 		}
