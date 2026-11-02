@@ -17,6 +17,7 @@ command can print JSON, so it fits in scripts, cron jobs and AI agents too.
 ```bash
 labtether-cli assets list
 labtether-cli exec <asset> "uptime"
+labtether-cli exec <asset> -- df -h
 labtether-cli docker restart <container>
 labtether-cli alerts list --json
 ```

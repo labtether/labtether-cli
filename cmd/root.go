@@ -53,10 +53,14 @@ func executeArgs(args []string) int {
 	requestedJSON := requestsJSONOutput(args)
 	jsonResponseWritten = false
 	commandStarted = false
+	execHelpAfterAsset = false
 	previousErrors, previousUsage := rootCmd.SilenceErrors, rootCmd.SilenceUsage
 	rootCmd.SilenceErrors, rootCmd.SilenceUsage = true, true
 	defer func() { rootCmd.SilenceErrors, rootCmd.SilenceUsage = previousErrors, previousUsage }()
 	executed, err := rootCmd.ExecuteC()
+	if err == nil && execHelpAfterAsset {
+		err = usageErrorf("-h after the asset asks for help and runs nothing. %s", execRemoteFlagsHint)
+	}
 	if err != nil {
 		if requestedJSON && executed != filesCatCmd && executed != dockerLogsCmd {
 			if !jsonResponseWritten {

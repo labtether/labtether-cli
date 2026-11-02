@@ -17,8 +17,12 @@ const (
 var execCmd = &cobra.Command{
 	Use:   "exec <asset> <command>",
 	Short: "Run a command on an asset",
-	Long:  "Execute a shell command on a managed asset. Use --targets for multi-asset execution.",
-	Args:  cobra.ArbitraryArgs,
+	Long: "Execute a shell command on a managed asset. Use --targets for multi-asset execution. " +
+		"When the command has its own flags, quote it or put it after --.",
+	Example: "  labtether-cli exec srv1 uptime\n" +
+		"  labtether-cli exec srv1 -- df -h\n" +
+		"  labtether-cli exec --targets srv1,srv2 \"free -m\"",
+	Args: cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		targets, _ := cmd.Flags().GetString("targets")
 		group, _ := cmd.Flags().GetString("group")
@@ -139,7 +143,30 @@ var execCmd = &cobra.Command{
 	},
 }
 
+const execRemoteFlagsHint = "To pass flags to the remote command, quote it or put it after --, " +
+	"for example: labtether-cli exec srv1 -- df -h"
+
+// execHelpAfterAsset is set when -h or --help follows the asset, as in
+// "exec srv1 df -h". Cobra would print help and exit 0 without running
+// anything; executeArgs turns it into a usage error instead.
+var execHelpAfterAsset bool
+
+// execFlagError explains the fix when a remote command's own flag, such as the
+// -m in "exec srv1 free -m", reaches the CLI's flag parser.
+func execFlagError(_ *cobra.Command, err error) error {
+	return usageErrorf("%v. %s", err, execRemoteFlagsHint)
+}
+
 func init() {
+	execCmd.SetFlagErrorFunc(execFlagError)
+	defaultHelp := execCmd.HelpFunc()
+	execCmd.SetHelpFunc(func(c *cobra.Command, args []string) {
+		if c == execCmd && len(c.Flags().Args()) > 0 {
+			execHelpAfterAsset = true
+			return
+		}
+		defaultHelp(c, args)
+	})
 	execCmd.Flags().String("targets", "", "Comma-separated list of asset IDs for multi-target exec")
 	execCmd.Flags().String("group", "", "Group ID, as shown by groups list, for multi-target exec")
 	execCmd.Flags().Var(
