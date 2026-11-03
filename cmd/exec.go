@@ -152,8 +152,12 @@ const execRemoteFlagsHint = "To pass flags to the remote command, quote it or pu
 var execHelpAfterAsset bool
 
 // execFlagError explains the fix when a remote command's own flag, such as the
-// -m in "exec srv1 free -m", reaches the CLI's flag parser.
+// -m in "exec srv1 free -m", reaches the CLI's flag parser. A bad value for one
+// of exec's own flags, such as --timeout 0, gets no hint.
 func execFlagError(_ *cobra.Command, err error) error {
+	if !strings.HasPrefix(err.Error(), "unknown ") {
+		return usageErrorf("%v", err)
+	}
 	return usageErrorf("%v. %s", err, execRemoteFlagsHint)
 }
 

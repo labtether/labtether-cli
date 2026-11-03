@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -297,4 +300,36 @@ func TestSaveConfig_FilePermissions(t *testing.T) {
 	}
 
 	assertConfigProtection(t, configPath())
+}
+
+// The CLI guide lists exit 4 for a configuration error, but a plain-HTTP hub
+// URL or an open key file exited 1, and config set-host saved any text.
+func TestConfigurationErrorsExitFour(t *testing.T) {
+	isolateConfig(t)
+	keyFile := filepath.Join(t.TempDir(), "api-key")
+	if err := os.WriteFile(keyFile, []byte("test-key"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cases := [][]string{
+		{"--host", "http://192.0.2.10:8443", "devices", "list"},
+		{"config", "set-host", "http://192.0.2.10:8443"},
+		{"config", "set-host", "not a url"},
+	}
+	if runtime.GOOS != "windows" {
+		cases = append(cases, []string{"--host", "https://192.0.2.10:8443", "--api-key-file", keyFile, "devices", "list"})
+	}
+	for _, args := range cases {
+		t.Setenv("LABTETHER_HOST", "")
+		t.Setenv("LABTETHER_API_KEY", "test-key")
+		resetTestCommandState()
+		var stdout, stderr bytes.Buffer
+		rootCmd.SetOut(&stdout)
+		rootCmd.SetErr(&stderr)
+		if code := executeArgs(args); code != 4 {
+			t.Fatalf("args=%v: exit code = %d, want 4; stderr = %q", args, code, stderr.String())
+		}
+	}
+	if cfg := mustLoadConfig(t); cfg.Host != "" {
+		t.Fatalf("set-host saved an invalid URL: %q", cfg.Host)
+	}
 }

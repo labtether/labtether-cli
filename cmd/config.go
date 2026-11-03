@@ -24,11 +24,15 @@ var configSetHostCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
-			return err
+			return asConfigError(err)
 		}
-		cfg.Host = strings.TrimRight(strings.TrimSpace(args[0]), "/")
+		host := strings.TrimRight(strings.TrimSpace(args[0]), "/")
+		if err := client.ValidateBaseURL(host); err != nil {
+			return asConfigError(err)
+		}
+		cfg.Host = host
 		if err := saveConfig(cfg); err != nil {
-			return fmt.Errorf("save config: %w", err)
+			return asConfigError(fmt.Errorf("save config: %w", err))
 		}
 		printStatusResult(map[string]string{"host": cfg.Host}, "Hub host set to: %s\n", cfg.Host)
 		return nil
@@ -42,15 +46,15 @@ var configSetKeyCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
-			return err
+			return asConfigError(err)
 		}
 		key, err := readAPIKey(cmd)
 		if err != nil {
-			return err
+			return asConfigError(err)
 		}
 		cfg.APIKey = key
 		if err := saveConfig(cfg); err != nil {
-			return fmt.Errorf("save config: %w", err)
+			return asConfigError(fmt.Errorf("save config: %w", err))
 		}
 		printStatusResult(map[string]bool{"saved": true}, "API key saved.\n")
 		return nil
@@ -64,18 +68,18 @@ var configSetCACmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
-			return err
+			return asConfigError(err)
 		}
 		caFile, err := filepath.Abs(strings.TrimSpace(args[0]))
 		if err != nil {
-			return fmt.Errorf("resolve TLS CA file: %w", err)
+			return asConfigError(fmt.Errorf("resolve TLS CA file: %w", err))
 		}
 		if err := client.ValidateTLSCAFile(caFile); err != nil {
-			return err
+			return asConfigError(err)
 		}
 		cfg.TLSCAFile = caFile
 		if err := saveConfig(cfg); err != nil {
-			return fmt.Errorf("save config: %w", err)
+			return asConfigError(fmt.Errorf("save config: %w", err))
 		}
 		printStatusResult(map[string]string{"tls_ca_file": caFile}, "TLS CA file set to: %s\n", caFile)
 		return nil
@@ -112,7 +116,7 @@ var configShowCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
-			return err
+			return asConfigError(err)
 		}
 		keyStatus := apiKeyStatus(cfg.APIKey != "")
 

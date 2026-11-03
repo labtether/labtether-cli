@@ -252,6 +252,15 @@ func TestExecCmd_RemoteCommandFlags(t *testing.T) {
 			t.Fatalf("args=%v: exit code = %d, want %d; output = %q", tc.args, code, tc.code, output)
 		}
 	}
+	// A bad value for exec's own --timeout is not a remote flag: no hint.
+	resetTestCommandState()
+	var stdout, stderr bytes.Buffer
+	rootCmd.SetOut(&stdout)
+	rootCmd.SetErr(&stderr)
+	if code := executeArgs([]string{"exec", "--timeout", "0", "asset-1", "uptime"}); code != 1 ||
+		!strings.Contains(stderr.String(), "between 1 and 300") || strings.Contains(stderr.String(), "put it after --") {
+		t.Fatalf("--timeout 0: exit code = %d, stderr = %q", code, stderr.String())
+	}
 	if len(commands) != 1 || commands[0] != "df -h" {
 		t.Fatalf("remote commands = %q, want only %q", commands, "df -h")
 	}

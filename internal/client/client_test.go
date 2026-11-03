@@ -221,3 +221,26 @@ func TestClient_ErrorResponse(t *testing.T) {
 		t.Fatal("should return error for 403")
 	}
 }
+
+// /api/v2/metrics/overview answers without the data envelope, and
+// `metrics overview` printed null.
+func TestGetUsesWholeBodyWhenResponseHasNoDataEnvelope(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/wrapped-null" {
+			_, _ = w.Write([]byte(`{"data":null}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"window":"1h0m0s","assets":[{"asset_id":"nas01"}]}`))
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "test-key")
+	resp, err := c.Get("/api/v2/metrics/overview")
+	if err != nil || !strings.Contains(string(resp.Data), `"asset_id":"nas01"`) {
+		t.Fatalf("unwrapped data = %s, err = %v", resp.Data, err)
+	}
+	resp, err = c.Get("/wrapped-null")
+	if err != nil || strings.Contains(string(resp.Data), "data") {
+		t.Fatalf("wrapped null data = %s, err = %v", resp.Data, err)
+	}
+}
