@@ -5,8 +5,8 @@ import (
 )
 
 var cronCmd = &cobra.Command{
-	Use:   "cron <asset>",
-	Short: "Show cron jobs on an asset",
+	Use:   "cron <device>",
+	Short: "Show cron jobs on a device",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

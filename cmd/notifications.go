@@ -6,7 +6,7 @@ import (
 
 var notificationsCmd = &cobra.Command{
 	Use:   "notifications",
-	Short: "View notification channels and history",
+	Short: "Show notification channels and history",
 }
 
 var notificationsChannelsCmd = &cobra.Command{
@@ -31,7 +31,7 @@ var notificationsChannelsCmd = &cobra.Command{
 
 var notificationsHistoryCmd = &cobra.Command{
 	Use:   "history",
-	Short: "View notification history",
+	Short: "List sent notifications",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -44,7 +44,7 @@ var notificationsHistoryCmd = &cobra.Command{
 		return printList(resp, "history",
 			col("ID", "id"),
 			col("CHANNEL", "channel_id"),
-			col("STATUS", "status"),
+			colFormat("STATUS", "status", statusWord),
 			colFormat("SENT", "sent_at", timeText),
 			col("RETRIES", "retry_count"),
 			col("ERROR", "error"))

@@ -8,12 +8,12 @@ import (
 
 var haCmd = &cobra.Command{
 	Use:   "ha",
-	Short: "Interact with Home Assistant",
+	Short: "List and control Home Assistant entities",
 }
 
 var haEntitiesCmd = &cobra.Command{
 	Use:   "entities",
-	Short: "List all Home Assistant entities",
+	Short: "List Home Assistant entities",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -28,13 +28,13 @@ var haEntitiesCmd = &cobra.Command{
 			col("ENTITY", "metadata.entity_id"),
 			col("NAME", "name"),
 			col("STATE", "metadata.state"),
-			col("STATUS", "status"))
+			colFormat("STATUS", "status", statusWord))
 	},
 }
 
 var haEntityCmd = &cobra.Command{
 	Use:   "entity <id>",
-	Short: "Get a Home Assistant entity by its ID, as shown by ha entities",
+	Short: "Show one Home Assistant entity, by the ID from ha entities",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

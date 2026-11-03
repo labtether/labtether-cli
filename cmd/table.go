@@ -19,11 +19,13 @@ import (
 const emptyCell = "-"
 
 // tableColumn is one column of human output. key is a dot path into a row,
-// such as "metadata.entity_id"; format defaults to cellText.
+// such as "metadata.entity_id"; format defaults to cellText. A column with
+// row set builds its text from several fields instead.
 type tableColumn struct {
 	header string
 	key    string
 	format func(any) string
+	row    func(map[string]any) string
 }
 
 func col(header, key string) tableColumn {
@@ -32,6 +34,10 @@ func col(header, key string) tableColumn {
 
 func colFormat(header, key string, format func(any) string) tableColumn {
 	return tableColumn{header: header, key: key, format: format}
+}
+
+func colRow(header string, text func(map[string]any) string) tableColumn {
+	return tableColumn{header: header, row: text}
 }
 
 // printList prints one list from the Hub data payload as a table. With --json
@@ -86,6 +92,10 @@ func printTable(rows []map[string]any, columns ...tableColumn) {
 	fmt.Fprintln(w, strings.Join(cells, "\t"))
 	for _, row := range rows {
 		for i, column := range columns {
+			if column.row != nil {
+				cells[i] = cleanCell(column.row(row))
+				continue
+			}
 			format := column.format
 			if format == nil {
 				format = cellText

@@ -6,7 +6,7 @@ import (
 
 var auditCmd = &cobra.Command{
 	Use:   "audit",
-	Short: "View audit event log",
+	Short: "Show the audit log",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {

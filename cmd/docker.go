@@ -14,7 +14,7 @@ const (
 
 var dockerCmd = &cobra.Command{
 	Use:   "docker",
-	Short: "Manage Docker containers across assets",
+	Short: "List and control Docker containers",
 }
 
 var dockerHostsCmd = &cobra.Command{
@@ -116,7 +116,7 @@ var dockerRestartCmd = &cobra.Command{
 
 var dockerLogsCmd = &cobra.Command{
 	Use:   "logs <container>",
-	Short: "View container logs",
+	Short: "Print a container's logs",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -145,7 +145,7 @@ var dockerLogsCmd = &cobra.Command{
 }
 
 func init() {
-	dockerPsCmd.Flags().Bool("all", false, "Accepted for compatibility; Hub already returns all containers")
+	dockerPsCmd.Flags().Bool("all", false, "No effect; the list always includes stopped containers")
 	dockerLogsCmd.Flags().Var(
 		newBoundedIntValue(100, "tail", "", minDockerLogTailLines, maxDockerLogTailLines),
 		"tail",

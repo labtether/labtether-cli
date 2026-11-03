@@ -6,12 +6,12 @@ import (
 
 var webServicesCmd = &cobra.Command{
 	Use:   "web-services",
-	Short: "Manage discovered web services",
+	Short: "List and sync the web services the hub found",
 }
 
 var webServicesListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all discovered web services",
+	Short: "List web services",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -22,14 +22,14 @@ var webServicesListCmd = &cobra.Command{
 			return err
 		}
 		return printList(resp, "services",
-			col("NAME", "name"), col("CATEGORY", "category"), col("STATUS", "status"),
+			col("NAME", "name"), col("CATEGORY", "category"), colFormat("STATUS", "status", statusWord),
 			col("HOST", "host_asset_id"), col("URL", "url"))
 	},
 }
 
 var webServicesSyncCmd = &cobra.Command{
 	Use:   "sync",
-	Short: "Trigger a web services sync",
+	Short: "Start a web services sync",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {

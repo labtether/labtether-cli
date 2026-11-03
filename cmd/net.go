@@ -5,8 +5,8 @@ import (
 )
 
 var netCmd = &cobra.Command{
-	Use:   "net <asset>",
-	Short: "Show network info for an asset",
+	Use:   "net <device>",
+	Short: "Show network interfaces on a device",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

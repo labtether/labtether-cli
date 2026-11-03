@@ -8,12 +8,12 @@ import (
 
 var packagesCmd = &cobra.Command{
 	Use:   "packages",
-	Short: "Manage packages on assets",
+	Short: "Install and update packages on a device",
 }
 
 var packagesListCmd = &cobra.Command{
-	Use:   "list <asset>",
-	Short: "List installed packages on an asset",
+	Use:   "list <device>",
+	Short: "List installed packages on a device",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -33,8 +33,8 @@ var packagesListCmd = &cobra.Command{
 }
 
 var packagesInstallCmd = &cobra.Command{
-	Use:   "install <asset> <pkg>",
-	Short: "Install a package on an asset",
+	Use:   "install <device> <package>",
+	Short: "Install a package on a device",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -53,8 +53,8 @@ var packagesInstallCmd = &cobra.Command{
 }
 
 var packagesUpdateCmd = &cobra.Command{
-	Use:   "update <asset>",
-	Short: "Update all packages on an asset",
+	Use:   "update <device>",
+	Short: "Update all packages on a device",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

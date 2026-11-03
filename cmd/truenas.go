@@ -8,12 +8,12 @@ import (
 
 var truenasCmd = &cobra.Command{
 	Use:   "truenas",
-	Short: "Interact with TrueNAS systems",
+	Short: "Show TrueNAS pools, datasets and shares",
 }
 
 var truenasGetCmd = &cobra.Command{
-	Use:   "get <sys>",
-	Short: "Get TrueNAS system details",
+	Use:   "get <device>",
+	Short: "Show one TrueNAS system",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -30,8 +30,8 @@ var truenasGetCmd = &cobra.Command{
 }
 
 var truenasPoolsCmd = &cobra.Command{
-	Use:   "pools <sys>",
-	Short: "List storage pools on a TrueNAS system",
+	Use:   "pools <device>",
+	Short: "List pools on a TrueNAS system",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -48,7 +48,7 @@ var truenasPoolsCmd = &cobra.Command{
 }
 
 var truenasDatasetsCmd = &cobra.Command{
-	Use:   "datasets <sys>",
+	Use:   "datasets <device>",
 	Short: "List datasets on a TrueNAS system",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -66,7 +66,7 @@ var truenasDatasetsCmd = &cobra.Command{
 }
 
 var truenasSharesCmd = &cobra.Command{
-	Use:   "shares <sys>",
+	Use:   "shares <device>",
 	Short: "List shares on a TrueNAS system",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

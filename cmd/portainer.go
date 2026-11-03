@@ -9,12 +9,12 @@ import (
 
 var portainerCmd = &cobra.Command{
 	Use:   "portainer",
-	Short: "Interact with Portainer environments",
+	Short: "Show Portainer stacks and containers",
 }
 
 var portainerGetCmd = &cobra.Command{
-	Use:   "get <env>",
-	Short: "Get Portainer environment details",
+	Use:   "get <device>",
+	Short: "Show one Portainer environment",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -31,7 +31,7 @@ var portainerGetCmd = &cobra.Command{
 }
 
 var portainerStacksCmd = &cobra.Command{
-	Use:   "stacks <env>",
+	Use:   "stacks <device>",
 	Short: "List stacks in a Portainer environment",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -51,7 +51,7 @@ var portainerStacksCmd = &cobra.Command{
 }
 
 var portainerContainersCmd = &cobra.Command{
-	Use:   "containers <env>",
+	Use:   "containers <device>",
 	Short: "List containers in a Portainer environment",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -67,7 +67,7 @@ var portainerContainersCmd = &cobra.Command{
 			colFormat("ID", "Id", shortID),
 			colFormat("NAME", "Names", containerNames),
 			col("IMAGE", "Image"),
-			col("STATE", "State"),
+			colFormat("STATE", "State", statusWord),
 			col("STATUS", "Status"))
 	},
 }
@@ -81,9 +81,9 @@ func init() {
 func portainerStackStatus(value any) string {
 	switch text := cellText(value); text {
 	case "1":
-		return "active"
+		return "Active"
 	case "2":
-		return "inactive"
+		return "Inactive"
 	default:
 		return text
 	}

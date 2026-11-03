@@ -8,12 +8,12 @@ import (
 
 var collectorsCmd = &cobra.Command{
 	Use:   "collectors",
-	Short: "View data collectors",
+	Short: "Show the hub's collectors",
 }
 
 var collectorsListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all collectors",
+	Short: "List collectors",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -26,16 +26,16 @@ var collectorsListCmd = &cobra.Command{
 		return printList(resp, "collectors",
 			col("ID", "id"),
 			col("TYPE", "collector_type"),
-			col("ASSET", "asset_id"),
+			col("DEVICE", "asset_id"),
 			col("ENABLED", "enabled"),
-			col("LAST STATUS", "last_status"),
+			colFormat("LAST STATUS", "last_status", statusWord),
 			colFormat("LAST RUN", "last_collected_at", timeText))
 	},
 }
 
 var collectorsGetCmd = &cobra.Command{
 	Use:   "get <id>",
-	Short: "Get collector details",
+	Short: "Show one collector",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

@@ -8,12 +8,12 @@ import (
 
 var discoveryCmd = &cobra.Command{
 	Use:   "discovery",
-	Short: "Manage asset discovery",
+	Short: "Run discovery and review suggested relationships",
 }
 
 var discoveryRunCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Trigger a discovery scan",
+	Short: "Start a discovery scan",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -30,7 +30,7 @@ var discoveryRunCmd = &cobra.Command{
 
 var discoveryProposalsCmd = &cobra.Command{
 	Use:   "proposals",
-	Short: "List pending discovery proposals",
+	Short: "List suggested relationships",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -51,7 +51,7 @@ var discoveryProposalsCmd = &cobra.Command{
 
 var discoveryAcceptCmd = &cobra.Command{
 	Use:   "accept <id>",
-	Short: "Accept a discovery proposal",
+	Short: "Accept a suggested relationship",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -62,7 +62,7 @@ var discoveryAcceptCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printMutationResult(resp, "Discovery proposal %s accepted\n", args[0])
+		printMutationResult(resp, "Suggested relationship %s accepted\n", args[0])
 		return nil
 	},
 }
@@ -70,7 +70,7 @@ var discoveryAcceptCmd = &cobra.Command{
 var discoveryRejectCmd = &cobra.Command{
 	Use:     "dismiss <id>",
 	Aliases: []string{"reject"},
-	Short:   "Dismiss a discovery proposal",
+	Short:   "Dismiss a suggested relationship",
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -81,7 +81,7 @@ var discoveryRejectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printMutationResult(resp, "Discovery proposal %s dismissed\n", args[0])
+		printMutationResult(resp, "Suggested relationship %s dismissed\n", args[0])
 		return nil
 	},
 }

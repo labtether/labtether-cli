@@ -9,6 +9,40 @@ agents. Apart from the changes below, commands, flags, output and exit codes
 are the same as in v1.7.1. The CLI works with Hub 2.0, whose API has the same
 routes as Hub v1.7.1.
 
+### Command names
+
+Commands use the console's 2.0 page names. The old names still work as hidden
+aliases: they run the same command and print the same output, with no warning
+on stdout or stderr, so existing scripts keep running. Help and shell
+completion show only the new names.
+
+| v1.7.1 | v2.0.0 |
+|:-------|:-------|
+| `assets` | `devices` |
+| `incidents` | `issues` |
+| `incidents ack` | `issues investigate` (`ack` already ran it) |
+| `topology` | `map` |
+| `topology blast-radius` | `map downstream` |
+| `topology edges` | `map connections` |
+| `metrics asset` | `metrics device` |
+
+### Output
+
+- `--json` output is unchanged. JSON field names are the Hub's own, such as
+  `asset_id`, `assets` and `incidents`, and scripts that read them keep
+  working.
+- Tables use the console's status words, such as `Online`, `Offline`,
+  `Not responding`, `Firing` and `Resolved`, instead of the Hub's lowercase
+  values. A device that is offline or not responding shows when it was last
+  seen: `Offline since 21:12`, or the date when that was more than a day ago.
+- Some table headers use the console's words: alerts and issues show STATE
+  (was STATUS), `devices list` shows ADDRESS (was IP), and `collectors list`
+  and `hub agents` show DEVICE (was ASSET). `search` names a device result
+  `device`, not `asset`. Column order is unchanged.
+- `whoami` lists "Devices" with `Online` or `Offline` for each.
+- Help text uses plain words and the new names, and its examples use neutral
+  hosts such as `nas01` and `pve01`.
+
 ### Commands
 
 - `connectors test` works again. It sent no connection settings, so the Hub
@@ -23,10 +57,10 @@ routes as Hub v1.7.1.
   table did not show it.
 - `exec --group` help says it takes a group ID, as shown by `groups list`. The
   Hub matches the group by ID, never by name.
-- `exec` says how to pass a remote command's own flags. `exec srv1 df -h`
-  printed help, ran nothing and exited 0; `exec srv1 free -m` failed with only
+- `exec` says how to pass a remote command's own flags. `exec nas01 df -h`
+  printed help, ran nothing and exited 0; `exec nas01 free -m` failed with only
   "unknown shorthand flag". Both now exit 1 and say to quote the command or
-  put it after `--`, as in `exec srv1 -- df -h`.
+  put it after `--`, as in `exec nas01 -- df -h`.
 
 ### Install
 

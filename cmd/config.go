@@ -14,7 +14,7 @@ import (
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Manage CLI configuration",
+	Short: "Save the hub connection settings",
 }
 
 var configSetHostCmd = &cobra.Command{
@@ -37,7 +37,7 @@ var configSetHostCmd = &cobra.Command{
 
 var configSetKeyCmd = &cobra.Command{
 	Use:   "set-key",
-	Short: "Read and store an API key securely",
+	Short: "Save an API key, read from a prompt or stdin",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
@@ -108,7 +108,7 @@ func readAPIKey(cmd *cobra.Command) (string, error) {
 
 var configShowCmd = &cobra.Command{
 	Use:   "show",
-	Short: "Show current configuration",
+	Short: "Show the saved settings",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -127,7 +127,7 @@ var configShowCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Host:    %s\n", cfg.Host)
-		fmt.Printf("API Key: %s\n", keyStatus)
+		fmt.Printf("API key: %s\n", keyStatus)
 		fmt.Printf("TLS CA:  %s\n", configuredPathStatus(cfg.TLSCAFile))
 		fmt.Printf("Config:  %s\n", configPath())
 		return nil

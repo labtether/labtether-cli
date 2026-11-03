@@ -13,7 +13,7 @@ func TestMutationCommandsHonorJSONOutput(t *testing.T) {
 	// These families previously discarded the response and printed plain text,
 	// so a successful action broke scripts that requested machine-readable data.
 	commands := [][]string{
-		{"alerts", "ack", "alert-1"}, {"incidents", "resolve", "incident-1"},
+		{"alerts", "ack", "alert-1"}, {"issues", "resolve", "incident-1"},
 		{"agents", "approve", "asset-1"}, {"services", "restart", "asset-1", "nginx"},
 		{"packages", "install", "asset-1", "curl"}, {"packages", "update", "asset-1"},
 		{"ha", "call", "switch.test", "switch.turn_on"}, {"reboot", "asset-1"},
@@ -132,7 +132,7 @@ func TestJSONArgumentErrorsRespectGlobalModeAndArgumentBoundary(t *testing.T) {
 		json bool
 	}{
 		{"unknown command", []string{"--json", "typo"}, true},
-		{"unknown flag", []string{"assets", "list", "--typo", "--json"}, true},
+		{"unknown flag", []string{"devices", "list", "--typo", "--json"}, true},
 		{"invalid value first", []string{"exec", "--timeout", "wrong", "--json"}, true},
 		{"explicit false", []string{"--json", "--json=false", "typo"}, false},
 		{"argument boundary", []string{"typo", "--", "--json"}, false},

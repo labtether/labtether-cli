@@ -8,12 +8,12 @@ import (
 
 var psCmd = &cobra.Command{
 	Use:   "ps",
-	Short: "Manage processes on assets",
+	Short: "List and signal processes on a device",
 }
 
 var psListCmd = &cobra.Command{
-	Use:   "list <asset>",
-	Short: "List running processes on an asset",
+	Use:   "list <device>",
+	Short: "List running processes on a device",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -33,8 +33,8 @@ var psListCmd = &cobra.Command{
 }
 
 var psKillCmd = &cobra.Command{
-	Use:   "kill <asset> <pid>",
-	Short: "Kill a process on an asset",
+	Use:   "kill <device> <pid>",
+	Short: "Send a signal to a process on a device",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pid, err := strconv.Atoi(args[1])
@@ -63,7 +63,7 @@ var psKillCmd = &cobra.Command{
 }
 
 func init() {
-	psKillCmd.Flags().String("signal", "SIGTERM", "Signal to send (SIGTERM, SIGKILL, etc.)")
+	psKillCmd.Flags().String("signal", "SIGTERM", "Signal to send, such as SIGTERM or SIGKILL")
 	psCmd.AddCommand(psListCmd, psKillCmd)
 	rootCmd.AddCommand(psCmd)
 }

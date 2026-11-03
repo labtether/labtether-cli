@@ -12,7 +12,7 @@ import (
 
 var proxmoxCmd = &cobra.Command{
 	Use:   "proxmox",
-	Short: "Interact with Proxmox clusters",
+	Short: "Show and control Proxmox VMs and containers",
 }
 
 var proxmoxClusterStatusCmd = &cobra.Command{
@@ -34,7 +34,7 @@ var proxmoxClusterStatusCmd = &cobra.Command{
 
 var proxmoxResourcesCmd = &cobra.Command{
 	Use:   "resources",
-	Short: "List all Proxmox resources",
+	Short: "List Proxmox resources",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -49,7 +49,7 @@ var proxmoxResourcesCmd = &cobra.Command{
 			col("TYPE", "type"),
 			col("NODE", "node"),
 			col("NAME", "name"),
-			col("STATUS", "status"))
+			colFormat("STATUS", "status", statusWord))
 	},
 }
 
@@ -91,7 +91,7 @@ var proxmoxNodesCmd = &cobra.Command{
 				nodes = append(nodes, resource)
 			}
 		}
-		printTable(nodes, col("NODE", "node"), col("STATUS", "status"),
+		printTable(nodes, col("NODE", "node"), colFormat("STATUS", "status", statusWord),
 			col("CPUS", "maxcpu"), colFormat("MEMORY", "maxmem", byteSize))
 		return nil
 	},
@@ -99,7 +99,7 @@ var proxmoxNodesCmd = &cobra.Command{
 
 var proxmoxGetCmd = &cobra.Command{
 	Use:   "get <vm>",
-	Short: "Get VM/CT details",
+	Short: "Show one VM or container",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -128,7 +128,7 @@ var proxmoxStartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printMutationResult(resp, "Proxmox asset %s started\n", args[0])
+		printMutationResult(resp, "Proxmox guest %s started\n", args[0])
 		return nil
 	},
 }
@@ -146,7 +146,7 @@ var proxmoxStopCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printMutationResult(resp, "Proxmox asset %s stopped\n", args[0])
+		printMutationResult(resp, "Proxmox guest %s stopped\n", args[0])
 		return nil
 	},
 }
@@ -164,14 +164,14 @@ var proxmoxRestartCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printMutationResult(resp, "Proxmox asset %s rebooted\n", args[0])
+		printMutationResult(resp, "Proxmox guest %s restarted\n", args[0])
 		return nil
 	},
 }
 
 var proxmoxCephStatusCmd = &cobra.Command{
 	Use:   "ceph-status",
-	Short: "Show Ceph storage status",
+	Short: "Show Ceph status",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -213,10 +213,10 @@ func requestProxmoxPowerAction(c *client.Client, assetID, verb string) (*client.
 		} `json:"asset"`
 	}
 	if err := json.Unmarshal(resp.Data, &details); err != nil {
-		return nil, fmt.Errorf("decode asset details: %w", err)
+		return nil, fmt.Errorf("decode device details: %w", err)
 	}
 	if !strings.EqualFold(details.Asset.Source, "proxmox") {
-		return nil, fmt.Errorf("asset %q is not a Proxmox asset", assetID)
+		return nil, fmt.Errorf("device %q is not from Proxmox", assetID)
 	}
 	prefix := ""
 	switch strings.ToLower(details.Asset.Type) {
@@ -225,7 +225,7 @@ func requestProxmoxPowerAction(c *client.Client, assetID, verb string) (*client.
 	case "container":
 		prefix = "ct"
 	default:
-		return nil, fmt.Errorf("asset %q is not a Proxmox VM or container", assetID)
+		return nil, fmt.Errorf("device %q is not a Proxmox VM or container", assetID)
 	}
 	actionID := prefix + "." + verb
 	result, err := c.Post("/api/v2/connectors/proxmox/actions/"+actionID+"/execute", map[string]string{"target_id": assetID})

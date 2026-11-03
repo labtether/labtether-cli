@@ -5,8 +5,8 @@ import (
 )
 
 var usersCmd = &cobra.Command{
-	Use:   "users <asset>",
-	Short: "Show local users on an asset",
+	Use:   "users <device>",
+	Short: "Show who is logged in to a device",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

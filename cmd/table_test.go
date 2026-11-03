@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func serveHubData(t *testing.T, data map[string]any) *httptest.Server {
@@ -78,7 +79,7 @@ func TestListCommandsPrintTablesAndKeepJSON(t *testing.T) {
 	}{
 		{[]string{"agents", "list"}, "ID PLATFORM", "node-1 linux"},
 		{[]string{"services", "list", "node-1"}, "NAME ACTIVE SUB ENABLED DESCRIPTION", "nginx.service active running enabled Web server"},
-		{[]string{"web-services", "list"}, "NAME CATEGORY STATUS HOST URL", "Grafana Monitoring up node-1 http://192.0.2.10:3000"},
+		{[]string{"web-services", "list"}, "NAME CATEGORY STATUS HOST URL", "Grafana Monitoring Up node-1 http://192.0.2.10:3000"},
 	} {
 		t.Run(strings.Join(tc.args, " "), func(t *testing.T) {
 			stdout, _, err := runConfiguredCmd(t, server.URL, tc.args...)
@@ -108,7 +109,7 @@ func TestSearchPrintsResultsOrNoResults(t *testing.T) {
 		{"matches", map[string]any{
 			"assets": []any{map[string]any{"id": "nas01", "name": "nas01", "type": "asset", "status": "online", "platform": "linux"}},
 			"groups": []any{map[string]any{"id": "g1", "name": "Storage", "type": "group"}},
-		}, "TYPE ID NAME STATUS PLATFORM\nasset nas01 nas01 online linux\ngroup g1 Storage - -"},
+		}, "TYPE ID NAME STATUS PLATFORM\ndevice nas01 nas01 Online linux\ngroup g1 Storage - -"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			server := serveHubData(t, map[string]any{"/api/v2/search": tc.data})
@@ -136,12 +137,40 @@ func TestPBSDatastoresReadsDetailsList(t *testing.T) {
 	stdout, _, err := runConfiguredCmd(t, server.URL, "pbs", "datastores", "pbs-1")
 	lines := strings.Split(strings.TrimSpace(stdout), "\n")
 	if err != nil || len(lines) != 2 || strings.Join(strings.Fields(lines[1]), " ") !=
-		"main online 1.0 TiB 512.0 GiB 512.0 GiB 50 4 120 -" {
+		"main Online 1.0 TiB 512.0 GiB 512.0 GiB 50 4 120 -" {
 		t.Fatalf("table output = %q, err = %v", stdout, err)
 	}
 	stdout, _, err = runConfiguredCmd(t, server.URL, "--json", "pbs", "datastores", "pbs-1")
 	var list []map[string]any
 	if err != nil || json.Unmarshal([]byte(stdout), &list) != nil || len(list) != 1 || list[0]["store"] != "main" {
 		t.Fatalf("--json output = %q, err = %v", stdout, err)
+	}
+}
+
+// Devices show the console's status words, with the time a device was last
+// seen when it is not online. The Hub sends a zero last_seen_at for a device
+// that never checked in; that must not print "Offline since 1 Jan 1".
+func TestDevicesListShowsStatusWithSince(t *testing.T) {
+	now := time.Date(2026, 11, 3, 22, 0, 0, 0, time.UTC)
+	timeNow = func() time.Time { return now }
+	t.Cleanup(func() { timeNow = time.Now })
+	seen, older := now.Add(-48*time.Minute), now.Add(-50*time.Hour)
+	server := serveHubData(t, map[string]any{"/api/v2/assets": []any{
+		map[string]any{"id": "nas01", "status": "online", "last_seen_at": now.Format(time.RFC3339)},
+		map[string]any{"id": "pve01", "status": "offline", "last_seen_at": seen.Format(time.RFC3339)},
+		map[string]any{"id": "pi01", "status": "stale", "last_seen_at": older.Format(time.RFC3339)},
+		map[string]any{"id": "nuc01", "status": "offline", "last_seen_at": "0001-01-01T00:00:00Z"},
+	}})
+	stdout, _, err := runConfiguredCmd(t, server.URL, "devices", "list")
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	want := []string{"Online", "Offline since " + seen.Local().Format("15:04"),
+		"Not responding since " + older.Local().Format("2 Jan"), "Offline -"}
+	if err != nil || len(lines) != 5 {
+		t.Fatalf("devices list = %q, err = %v", stdout, err)
+	}
+	for i, status := range want {
+		if row := strings.Join(strings.Fields(lines[i+1]), " "); !strings.Contains(row, " - "+status+" ") {
+			t.Fatalf("row %d = %q, want status %q", i+1, row, status)
+		}
 	}
 }

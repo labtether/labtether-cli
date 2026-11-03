@@ -49,12 +49,12 @@ func TestDockerLogsCmd_InvalidTailFailsBeforeClientConfig(t *testing.T) {
 	}
 }
 
-// ── assets argument validation ────────────────────────────────────────────
+// ── devices argument validation ───────────────────────────────────────────
 
-func TestAssetsGetCmd_NoArgs(t *testing.T) {
-	_, _, err := runCmd(t, "assets", "get")
+func TestDevicesGetCmd_NoArgs(t *testing.T) {
+	_, _, err := runCmd(t, "devices", "get")
 	if err == nil {
-		t.Fatal("expected error: 'assets get' requires exactly one arg")
+		t.Fatal("expected error: 'devices get' requires exactly one arg")
 	}
 }
 

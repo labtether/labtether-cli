@@ -8,12 +8,12 @@ import (
 
 var checksCmd = &cobra.Command{
 	Use:   "checks",
-	Short: "View health checks",
+	Short: "Show service checks",
 }
 
 var checksListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all checks",
+	Short: "List service checks",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -28,14 +28,14 @@ var checksListCmd = &cobra.Command{
 			col("NAME", "name"),
 			col("TYPE", "check_type"),
 			col("ENABLED", "enabled"),
-			col("LAST STATUS", "last_status"),
+			colFormat("LAST STATUS", "last_status", statusWord),
 			col("TARGET", "target"))
 	},
 }
 
 var checksGetCmd = &cobra.Command{
 	Use:   "get <id>",
-	Short: "Get check details",
+	Short: "Show one check",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

@@ -10,12 +10,12 @@ import (
 
 var filesCmd = &cobra.Command{
 	Use:   "files",
-	Short: "Browse and manage files on assets",
+	Short: "List and read files on a device",
 }
 
 var filesLsCmd = &cobra.Command{
-	Use:   "ls <asset> <path>",
-	Short: "List files in a directory on an asset",
+	Use:   "ls <device> <path>",
+	Short: "List a directory on a device",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -58,8 +58,8 @@ var filesLsCmd = &cobra.Command{
 }
 
 var filesCatCmd = &cobra.Command{
-	Use:   "cat <asset> <path>",
-	Short: "Print file contents from an asset",
+	Use:   "cat <device> <path>",
+	Short: "Print a file from a device",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

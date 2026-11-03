@@ -8,12 +8,12 @@ import (
 
 var credentialsCmd = &cobra.Command{
 	Use:   "credentials",
-	Short: "View stored credentials",
+	Short: "Show saved credentials without their secrets",
 }
 
 var credentialsListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List credentials (metadata only)",
+	Short: "List saved credentials",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -28,13 +28,13 @@ var credentialsListCmd = &cobra.Command{
 			col("NAME", "name"),
 			col("KIND", "kind"),
 			col("USERNAME", "username"),
-			col("STATUS", "status"))
+			colFormat("STATUS", "status", statusWord))
 	},
 }
 
 var credentialsGetCmd = &cobra.Command{
 	Use:   "get <id>",
-	Short: "Get credential metadata",
+	Short: "Show one credential",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

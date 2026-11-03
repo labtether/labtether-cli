@@ -7,14 +7,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var assetsCmd = &cobra.Command{
-	Use:   "assets",
-	Short: "Manage assets (servers, VMs, containers)",
+// devices was called assets before 2.0; the old name stays as a hidden alias.
+var devicesCmd = &cobra.Command{
+	Use:     "devices",
+	Aliases: []string{"assets"},
+	Short:   "List devices and show their details",
+	Example: "  labtether-cli devices list\n" +
+		"  labtether-cli devices list --online\n" +
+		"  labtether-cli devices get nas01",
 }
 
-var assetsListCmd = &cobra.Command{
+var devicesListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all accessible assets",
+	Short: "List the devices this API key can reach",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -36,19 +41,19 @@ var assetsListCmd = &cobra.Command{
 			return nil
 		}
 
-		assets, err := decodeRows(resp.Data)
+		devices, err := decodeRows(resp.Data)
 		if err != nil {
 			return fmt.Errorf("failed to parse response: %w", err)
 		}
-		printTable(assets, col("ID", "id"), col("PLATFORM", "platform"), col("STATUS", "status"),
-			col("IP", "metadata.ip"), col("NAME", "name"))
+		printTable(devices, col("ID", "id"), col("PLATFORM", "platform"), colRow("STATUS", deviceStatus),
+			col("ADDRESS", "metadata.ip"), col("NAME", "name"))
 		return nil
 	},
 }
 
-var assetsGetCmd = &cobra.Command{
-	Use:   "get <asset-id>",
-	Short: "Get asset details",
+var devicesGetCmd = &cobra.Command{
+	Use:   "get <device>",
+	Short: "Show one device",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -67,7 +72,7 @@ var assetsGetCmd = &cobra.Command{
 }
 
 func init() {
-	assetsListCmd.Flags().Bool("online", false, "Show only online assets")
-	assetsCmd.AddCommand(assetsListCmd, assetsGetCmd)
-	rootCmd.AddCommand(assetsCmd)
+	devicesListCmd.Flags().Bool("online", false, "Show only online devices")
+	devicesCmd.AddCommand(devicesListCmd, devicesGetCmd)
+	rootCmd.AddCommand(devicesCmd)
 }
