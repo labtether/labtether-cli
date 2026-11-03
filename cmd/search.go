@@ -10,7 +10,7 @@ import (
 
 var searchCmd = &cobra.Command{
 	Use:   "search <query>",
-	Short: "Search across all hub objects",
+	Short: "Search devices and groups",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -47,12 +47,21 @@ var searchCmd = &cobra.Command{
 			fmt.Fprintln(cmd.OutOrStdout(), "No results.")
 			return nil
 		}
-		printTable(results, col("TYPE", "type"), col("ID", "id"), col("NAME", "name"),
-			col("STATUS", "status"), col("PLATFORM", "platform"))
+		printTable(results, colFormat("TYPE", "type", resultKind), col("ID", "id"), col("NAME", "name"),
+			colRow("STATUS", deviceStatus), col("PLATFORM", "platform"))
 		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(searchCmd)
+}
+
+// resultKind names a result's kind with the console's words: the Hub calls a
+// device an asset.
+func resultKind(value any) string {
+	if text := cellText(value); text != "asset" {
+		return text
+	}
+	return "device"
 }

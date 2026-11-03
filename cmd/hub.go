@@ -8,7 +8,7 @@ import (
 
 var hubCmd = &cobra.Command{
 	Use:   "hub",
-	Short: "View hub status and configuration",
+	Short: "Show hub status and connected agents",
 }
 
 var hubStatusCmd = &cobra.Command{
@@ -30,7 +30,7 @@ var hubStatusCmd = &cobra.Command{
 
 var hubAgentsCmd = &cobra.Command{
 	Use:   "agents",
-	Short: "Show agents connected to the hub",
+	Short: "List agents connected to the hub",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -41,7 +41,7 @@ var hubAgentsCmd = &cobra.Command{
 			return err
 		}
 		return printList(resp, "presence",
-			col("ASSET", "asset_id"),
+			col("DEVICE", "asset_id"),
 			col("TRANSPORT", "transport"),
 			colFormat("CONNECTED", "connected_at", timeText),
 			colFormat("LAST HEARTBEAT", "last_heartbeat_at", timeText))

@@ -9,12 +9,12 @@ import (
 
 var connectorsCmd = &cobra.Command{
 	Use:   "connectors",
-	Short: "Manage hub connectors",
+	Short: "List and test hub connectors",
 }
 
 var connectorsListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all connectors",
+	Short: "List connectors",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -32,7 +32,7 @@ var connectorsListCmd = &cobra.Command{
 
 var connectorsGetCmd = &cobra.Command{
 	Use:   "get <id>",
-	Short: "Get connector details",
+	Short: "Show one connector",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -65,7 +65,7 @@ var connectorsGetCmd = &cobra.Command{
 
 var connectorsTestCmd = &cobra.Command{
 	Use:   "test <connector-or-collector-id>",
-	Short: "Test a saved connector connection",
+	Short: "Test a saved connection",
 	Long: "Test the saved connection for a connector, such as proxmox or truenas. " +
 		"When a connector has more than one saved connection, give its collector ID, as shown by collectors list.",
 	Args: cobra.ExactArgs(1),

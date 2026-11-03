@@ -8,12 +8,12 @@ import (
 
 var groupsCmd = &cobra.Command{
 	Use:   "groups",
-	Short: "Manage asset groups",
+	Short: "List and create device groups",
 }
 
 var groupsListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all groups",
+	Short: "List groups",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -33,7 +33,7 @@ var groupsListCmd = &cobra.Command{
 
 var groupsGetCmd = &cobra.Command{
 	Use:   "get <group>",
-	Short: "Get group details",
+	Short: "Show one group",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -51,7 +51,7 @@ var groupsGetCmd = &cobra.Command{
 
 var groupsCreateCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Create a new group",
+	Short: "Create a group",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name, _ := cmd.Flags().GetString("name")
 		if name == "" {

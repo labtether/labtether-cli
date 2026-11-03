@@ -7,8 +7,8 @@ import (
 )
 
 var rebootCmd = &cobra.Command{
-	Use:   "reboot <asset>",
-	Short: "Reboot an asset",
+	Use:   "reboot <device>",
+	Short: "Reboot a device",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -25,8 +25,8 @@ var rebootCmd = &cobra.Command{
 }
 
 var shutdownCmd = &cobra.Command{
-	Use:   "shutdown <asset>",
-	Short: "Shut down an asset",
+	Use:   "shutdown <device>",
+	Short: "Shut down a device",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -43,8 +43,8 @@ var shutdownCmd = &cobra.Command{
 }
 
 var wakeCmd = &cobra.Command{
-	Use:   "wake <asset>",
-	Short: "Wake an asset via Wake-on-LAN",
+	Use:   "wake <device>",
+	Short: "Wake a device with Wake-on-LAN",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

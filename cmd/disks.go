@@ -5,8 +5,8 @@ import (
 )
 
 var disksCmd = &cobra.Command{
-	Use:   "disks <asset>",
-	Short: "Show disk info for an asset",
+	Use:   "disks <device>",
+	Short: "Show disks and mounts on a device",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

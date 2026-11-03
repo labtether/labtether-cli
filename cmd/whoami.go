@@ -9,7 +9,7 @@ import (
 
 var whoamiCmd = &cobra.Command{
 	Use:   "whoami",
-	Short: "Show API key info, scopes, and accessible assets",
+	Short: "Show this API key's role, scopes and devices",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -46,18 +46,18 @@ var whoamiCmd = &cobra.Command{
 			}
 			fmt.Println()
 		}
-		if assets, ok := data["available_assets"].([]any); ok {
-			fmt.Printf("Assets:   %d accessible\n", len(assets))
-			for _, a := range assets {
-				asset, ok := a.(map[string]any)
+		if devices, ok := data["available_assets"].([]any); ok {
+			fmt.Printf("Devices:  %d\n", len(devices))
+			for _, d := range devices {
+				device, ok := d.(map[string]any)
 				if !ok {
 					continue
 				}
-				status := "offline"
-				if asset["online"] == true {
-					status = "online"
+				status := "Offline"
+				if device["online"] == true {
+					status = "Online"
 				}
-				fmt.Printf("  %-20s %-10s %s\n", cleanCell(cellText(asset["id"])), cleanCell(cellText(asset["platform"])), status)
+				fmt.Printf("  %-20s %-10s %s\n", cleanCell(cellText(device["id"])), cleanCell(cellText(device["platform"])), status)
 			}
 		}
 		return nil

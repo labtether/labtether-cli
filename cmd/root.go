@@ -37,9 +37,13 @@ type config struct {
 }
 
 var rootCmd = &cobra.Command{
-	Use:     "labtether-cli",
-	Short:   "LabTether CLI -- control your homelab from the command line",
-	Long:    "labtether-cli is a command-line interface for the LabTether hub API. It lets you manage assets, run commands, manage files, and control your entire homelab.",
+	Use:   "labtether-cli",
+	Short: "Run your LabTether hub from the terminal",
+	Long: "labtether-cli works with your LabTether hub from a shell or a script. " +
+		"Add --json to a command to print the hub's data as JSON.",
+	Example: "  labtether-cli devices list\n" +
+		"  labtether-cli exec nas01 -- df -h\n" +
+		"  labtether-cli issues list --json",
 	Version: version,
 }
 
@@ -59,7 +63,7 @@ func executeArgs(args []string) int {
 	defer func() { rootCmd.SilenceErrors, rootCmd.SilenceUsage = previousErrors, previousUsage }()
 	executed, err := rootCmd.ExecuteC()
 	if err == nil && execHelpAfterAsset {
-		err = usageErrorf("-h after the asset asks for help and runs nothing. %s", execRemoteFlagsHint)
+		err = usageErrorf("-h after the device asks for help and runs nothing. %s", execRemoteFlagsHint)
 	}
 	if err != nil {
 		if requestedJSON && executed != filesCatCmd && executed != dockerLogsCmd {
@@ -83,7 +87,7 @@ func executeArgs(args []string) int {
 		case strings.Contains(errStr, "(status 401)") || strings.Contains(errStr, "(status 403)"):
 			return 2 // auth error
 		case strings.Contains(errStr, "(status 409)") || strings.Contains(errStr, "(status 404)"):
-			return 3 // asset offline or not found
+			return 3 // device offline or not found
 		case strings.Contains(errStr, "not configured"):
 			return 4 // CLI usage error
 		default:
@@ -116,12 +120,12 @@ func decodeResponseList(resp *client.V2Response, field string, dst any) error {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&cfgHost, "host", "", "Hub URL (overrides config)")
+	rootCmd.PersistentFlags().StringVar(&cfgHost, "host", "", "Hub URL (overrides the config file)")
 	rootCmd.PersistentFlags().StringVar(&cfgAPIKey, "api-key", "", "API key (overrides config)")
 	rootCmd.PersistentFlags().StringVar(&cfgAPIKeyFile, "api-key-file", "", "Read API key from a protected file")
 	rootCmd.PersistentFlags().StringVar(&cfgTLSCAFile, "tls-ca-file", "", "Trust additional PEM CA certificates for the hub")
 	_ = rootCmd.PersistentFlags().MarkDeprecated("api-key", "command-line secrets are visible in shell history and process listings; use --api-key-file or LABTETHER_API_KEY")
-	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
+	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Print the result as JSON")
 }
 
 func newClient() (*client.Client, error) {
@@ -169,10 +173,10 @@ func newClient() (*client.Client, error) {
 		return nil, cfgErr
 	}
 	if host == "" {
-		return nil, fmt.Errorf("hub host not configured -- run: labtether-cli config set-host <url>")
+		return nil, fmt.Errorf("hub host not configured; run: labtether-cli config set-host <url>")
 	}
 	if key == "" {
-		return nil, fmt.Errorf("api key not configured -- run: labtether-cli config set-key")
+		return nil, fmt.Errorf("API key not configured; run: labtether-cli config set-key")
 	}
 
 	if err := client.ValidateBaseURL(host); err != nil {

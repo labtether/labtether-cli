@@ -9,12 +9,12 @@ import (
 
 var failoverCmd = &cobra.Command{
 	Use:   "failover",
-	Short: "Manage failover configurations",
+	Short: "Show failover pairs",
 }
 
 var failoverListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List failover configurations",
+	Short: "List failover pairs",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -35,7 +35,7 @@ var failoverListCmd = &cobra.Command{
 
 var failoverGetCmd = &cobra.Command{
 	Use:   "get <id>",
-	Short: "Get failover configuration details",
+	Short: "Show one failover pair",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

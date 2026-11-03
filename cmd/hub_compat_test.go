@@ -26,10 +26,10 @@ func TestCommandsUseCurrentHubRoutes(t *testing.T) {
 		{"failover list", []string{"failover", "list"}, "GET", "/api/v2/failover-pairs", map[string]any{"pairs": []any{}}},
 		{"failover get", []string{"failover", "get", "pair-1"}, "GET", "/api/v2/failover-pairs/pair-1", map[string]any{}},
 		{"failover readiness", []string{"failover", "check-readiness", "pair-1"}, "POST", "/api/v2/failover-pairs/pair-1/check-readiness", map[string]any{}},
-		{"dependencies", []string{"topology", "dependencies", "asset-1"}, "GET", "/api/v2/dependencies?asset_id=asset-1", map[string]any{}},
-		{"downstream", []string{"topology", "blast-radius", "asset-1"}, "GET", "/api/v2/edges/tree?root=asset-1", map[string]any{}},
-		{"upstream", []string{"topology", "upstream", "asset-1"}, "GET", "/api/v2/edges/ancestors?id=asset-1", map[string]any{}},
-		{"edges", []string{"topology", "edges", "asset-1"}, "GET", "/api/v2/edges?asset_id=asset-1", map[string]any{}},
+		{"dependencies", []string{"map", "dependencies", "asset-1"}, "GET", "/api/v2/dependencies?asset_id=asset-1", map[string]any{}},
+		{"downstream", []string{"map", "downstream", "asset-1"}, "GET", "/api/v2/edges/tree?root=asset-1", map[string]any{}},
+		{"upstream", []string{"map", "upstream", "asset-1"}, "GET", "/api/v2/edges/ancestors?id=asset-1", map[string]any{}},
+		{"connections", []string{"map", "connections", "asset-1"}, "GET", "/api/v2/edges?asset_id=asset-1", map[string]any{}},
 		{"discovery dismiss", []string{"discovery", "dismiss", "proposal-1"}, "POST", "/api/v2/discovery/proposals/proposal-1/dismiss", map[string]any{}},
 		{"truenas overview", []string{"truenas", "get", "nas-1"}, "GET", "/api/v2/truenas/assets/nas-1/overview", map[string]any{}},
 		{"pbs details", []string{"pbs", "get", "pbs-1"}, "GET", "/api/v2/pbs/assets/pbs-1/details", map[string]any{}},
@@ -80,7 +80,7 @@ func TestHumanOutputCommandsAcceptHubListEnvelopes(t *testing.T) {
 		{"collectors", []string{"collectors", "list"}, map[string]any{"collectors": []any{}}},
 		{"connectors", []string{"connectors", "list"}, map[string]any{"connectors": []any{}}},
 		{"groups", []string{"groups", "list"}, map[string]any{"groups": []any{}}},
-		{"incidents", []string{"incidents", "list"}, map[string]any{"incidents": []any{}}},
+		{"issues", []string{"issues", "list"}, map[string]any{"incidents": []any{}}},
 		{"update plans", []string{"updates", "plans", "list"}, map[string]any{"plans": []any{}}},
 		{"update runs", []string{"updates", "runs", "list"}, map[string]any{"runs": []any{}}},
 		{"notification channels", []string{"notifications", "channels"}, map[string]any{"channels": []any{}, "capabilities": map[string]any{}}},
@@ -147,7 +147,7 @@ func TestConnectorGetSelectsDescriptorFromList(t *testing.T) {
 	}
 }
 
-func TestIncidentChangesUsePatchStatus(t *testing.T) {
+func TestIssueChangesUsePatchStatus(t *testing.T) {
 	for _, tc := range []struct{ command, status string }{
 		{"investigate", "investigating"},
 		{"resolve", "resolved"},
@@ -166,7 +166,7 @@ func TestIncidentChangesUsePatchStatus(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}})
 			}))
 			defer server.Close()
-			_, _, err := runConfiguredCmd(t, server.URL, "incidents", tc.command, "incident-1")
+			_, _, err := runConfiguredCmd(t, server.URL, "issues", tc.command, "incident-1")
 			if err != nil || method != "PATCH" || path != "/api/v2/incidents/incident-1" || status != tc.status {
 				t.Fatalf("method=%q path=%q status=%q err=%v", method, path, status, err)
 			}

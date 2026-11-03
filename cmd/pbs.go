@@ -10,12 +10,12 @@ import (
 
 var pbsCmd = &cobra.Command{
 	Use:   "pbs",
-	Short: "Interact with Proxmox Backup Server",
+	Short: "Show Proxmox Backup Server datastores and snapshots",
 }
 
 var pbsGetCmd = &cobra.Command{
-	Use:   "get <srv>",
-	Short: "Get PBS server details",
+	Use:   "get <device>",
+	Short: "Show one PBS server",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -32,7 +32,7 @@ var pbsGetCmd = &cobra.Command{
 }
 
 var pbsDatastoresCmd = &cobra.Command{
-	Use:   "datastores <srv>",
+	Use:   "datastores <device>",
 	Short: "List datastores on a PBS server",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -57,7 +57,7 @@ var pbsDatastoresCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("decode response data: datastores: %w", err)
 		}
-		printTable(rows, col("STORE", "store"), col("STATUS", "status"),
+		printTable(rows, col("STORE", "store"), colFormat("STATUS", "status", statusWord),
 			colFormat("SIZE", "total_bytes", byteSize), colFormat("USED", "used_bytes", byteSize),
 			colFormat("AVAIL", "avail_bytes", byteSize), col("USE%", "usage_percent"),
 			col("GROUPS", "group_count"), col("SNAPSHOTS", "snapshot_count"),
@@ -67,7 +67,7 @@ var pbsDatastoresCmd = &cobra.Command{
 }
 
 var pbsSnapshotsCmd = &cobra.Command{
-	Use:   "snapshots <srv>",
+	Use:   "snapshots <device>",
 	Short: "List snapshots on a PBS server",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

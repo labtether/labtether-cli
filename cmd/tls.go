@@ -8,7 +8,7 @@ import (
 
 var tlsCmd = &cobra.Command{
 	Use:   "tls",
-	Short: "View TLS certificate status",
+	Short: "Show the hub's TLS certificate",
 }
 
 var tlsStatusCmd = &cobra.Command{

@@ -8,12 +8,12 @@ import (
 
 var metricsCmd = &cobra.Command{
 	Use:   "metrics",
-	Short: "View hub and asset metrics",
+	Short: "Show device metrics",
 }
 
 var metricsOverviewCmd = &cobra.Command{
 	Use:   "overview",
-	Short: "Show fleet-wide metrics overview",
+	Short: "Show metrics for all devices",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -28,10 +28,12 @@ var metricsOverviewCmd = &cobra.Command{
 	},
 }
 
-var metricsAssetCmd = &cobra.Command{
-	Use:   "asset <asset>",
-	Short: "Show metrics for a specific asset",
-	Args:  cobra.ExactArgs(1),
+// metrics device was metrics asset before 2.0; the old name stays as a hidden alias.
+var metricsDeviceCmd = &cobra.Command{
+	Use:     "device <device>",
+	Aliases: []string{"asset"},
+	Short:   "Show metrics for one device",
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -47,6 +49,6 @@ var metricsAssetCmd = &cobra.Command{
 }
 
 func init() {
-	metricsCmd.AddCommand(metricsOverviewCmd, metricsAssetCmd)
+	metricsCmd.AddCommand(metricsOverviewCmd, metricsDeviceCmd)
 	rootCmd.AddCommand(metricsCmd)
 }

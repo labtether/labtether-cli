@@ -15,13 +15,13 @@ const (
 )
 
 var execCmd = &cobra.Command{
-	Use:   "exec <asset> <command>",
-	Short: "Run a command on an asset",
-	Long: "Execute a shell command on a managed asset. Use --targets for multi-asset execution. " +
+	Use:   "exec <device> <command>",
+	Short: "Run a command on a device",
+	Long: "Run a shell command on a device, or with --targets or --group on several devices. " +
 		"When the command has its own flags, quote it or put it after --.",
-	Example: "  labtether-cli exec srv1 uptime\n" +
-		"  labtether-cli exec srv1 -- df -h\n" +
-		"  labtether-cli exec --targets srv1,srv2 \"free -m\"",
+	Example: "  labtether-cli exec nas01 uptime\n" +
+		"  labtether-cli exec nas01 -- df -h\n" +
+		"  labtether-cli exec --targets nas01,pve01 \"free -m\"",
 	Args: cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		targets, _ := cmd.Flags().GetString("targets")
@@ -32,7 +32,7 @@ var execCmd = &cobra.Command{
 			return usageErrorf("timeout must be between %d and %d seconds", minExecTimeoutSeconds, maxExecTimeoutSeconds)
 		}
 		if targets == "" && group == "" && len(args) < 2 {
-			return usageErrorf("an asset and a command are required, or --targets or --group with a command")
+			return usageErrorf("a device and a command are required, or --targets or --group with a command")
 		}
 		if (targets != "" || group != "") && len(args) < 1 {
 			return usageErrorf("command is required")
@@ -144,7 +144,7 @@ var execCmd = &cobra.Command{
 }
 
 const execRemoteFlagsHint = "To pass flags to the remote command, quote it or put it after --, " +
-	"for example: labtether-cli exec srv1 -- df -h"
+	"for example: labtether-cli exec nas01 -- df -h"
 
 // execHelpAfterAsset is set when -h or --help follows the asset, as in
 // "exec srv1 df -h". Cobra would print help and exit 0 without running
@@ -167,8 +167,8 @@ func init() {
 		}
 		defaultHelp(c, args)
 	})
-	execCmd.Flags().String("targets", "", "Comma-separated list of asset IDs for multi-target exec")
-	execCmd.Flags().String("group", "", "Group ID, as shown by groups list, for multi-target exec")
+	execCmd.Flags().String("targets", "", "Device IDs to run on, separated by commas")
+	execCmd.Flags().String("group", "", "Group ID to run on, as shown by groups list")
 	execCmd.Flags().Var(
 		newBoundedIntValue(30, "timeout", "seconds", minExecTimeoutSeconds, maxExecTimeoutSeconds),
 		"timeout",

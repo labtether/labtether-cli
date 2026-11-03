@@ -9,12 +9,12 @@ import (
 
 var updatesCmd = &cobra.Command{
 	Use:   "updates",
-	Short: "Manage update plans and runs",
+	Short: "Run update plans and list their runs",
 }
 
 var updatesPlansCmd = &cobra.Command{
 	Use:   "plans",
-	Short: "Manage update plans",
+	Short: "List and run update plans",
 }
 
 var updatesPlansListCmd = &cobra.Command{
@@ -39,7 +39,7 @@ var updatesPlansListCmd = &cobra.Command{
 
 var updatesPlansExecuteCmd = &cobra.Command{
 	Use:   "execute <plan>",
-	Short: "Execute an update plan",
+	Short: "Run an update plan",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -50,14 +50,14 @@ var updatesPlansExecuteCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printMutationResult(resp, "Update plan %s execution started\n", args[0])
+		printMutationResult(resp, "Update plan %s started\n", args[0])
 		return nil
 	},
 }
 
 var updatesRunsCmd = &cobra.Command{
 	Use:   "runs",
-	Short: "View update run history",
+	Short: "Show past update runs",
 }
 
 var updatesRunsListCmd = &cobra.Command{
@@ -75,7 +75,7 @@ var updatesRunsListCmd = &cobra.Command{
 		return printList(resp, "runs",
 			col("ID", "id"),
 			col("PLAN", "plan_name"),
-			col("STATUS", "status"),
+			colFormat("STATUS", "status", statusWord),
 			col("DRY RUN", "dry_run"),
 			colFormat("CREATED", "created_at", timeText))
 	},
@@ -83,7 +83,7 @@ var updatesRunsListCmd = &cobra.Command{
 
 var updatesRunsGetCmd = &cobra.Command{
 	Use:   "get <run>",
-	Short: "Get details for an update run",
+	Short: "Show one update run",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()

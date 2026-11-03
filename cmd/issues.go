@@ -7,14 +7,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var incidentsCmd = &cobra.Command{
-	Use:   "incidents",
-	Short: "Manage incidents",
+// issues was called incidents before 2.0; the old name stays as a hidden alias.
+var issuesCmd = &cobra.Command{
+	Use:     "issues",
+	Aliases: []string{"incidents"},
+	Short:   "List and resolve issues",
+	Example: "  labtether-cli issues list\n" +
+		"  labtether-cli issues investigate <id>\n" +
+		"  labtether-cli issues resolve <id>",
 }
 
-var incidentsListCmd = &cobra.Command{
+var issuesListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List incidents",
+	Short: "List issues",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {
@@ -26,16 +31,16 @@ var incidentsListCmd = &cobra.Command{
 		}
 		return printList(resp, "incidents",
 			col("ID", "id"),
-			col("SEVERITY", "severity"),
-			col("STATUS", "status"),
+			colFormat("SEVERITY", "severity", statusWord),
+			colFormat("STATE", "status", statusWord),
 			colFormat("OPENED", "opened_at", timeText),
 			col("TITLE", "title"))
 	},
 }
 
-var incidentsGetCmd = &cobra.Command{
+var issuesGetCmd = &cobra.Command{
 	Use:   "get <id>",
-	Short: "Get incident details",
+	Short: "Show one issue",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -51,10 +56,10 @@ var incidentsGetCmd = &cobra.Command{
 	},
 }
 
-var incidentsAckCmd = &cobra.Command{
+var issuesInvestigateCmd = &cobra.Command{
 	Use:     "investigate <id>",
 	Aliases: []string{"ack"},
-	Short:   "Move an incident to investigating",
+	Short:   "Move an issue to Investigating",
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -65,14 +70,14 @@ var incidentsAckCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printMutationResult(resp, "Incident %s moved to investigating\n", args[0])
+		printMutationResult(resp, "Issue %s moved to Investigating\n", args[0])
 		return nil
 	},
 }
 
-var incidentsResolveCmd = &cobra.Command{
+var issuesResolveCmd = &cobra.Command{
 	Use:   "resolve <id>",
-	Short: "Resolve an incident",
+	Short: "Resolve an issue",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -83,12 +88,12 @@ var incidentsResolveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printMutationResult(resp, "Incident %s resolved\n", args[0])
+		printMutationResult(resp, "Issue %s resolved\n", args[0])
 		return nil
 	},
 }
 
 func init() {
-	incidentsCmd.AddCommand(incidentsListCmd, incidentsGetCmd, incidentsAckCmd, incidentsResolveCmd)
-	rootCmd.AddCommand(incidentsCmd)
+	issuesCmd.AddCommand(issuesListCmd, issuesGetCmd, issuesInvestigateCmd, issuesResolveCmd)
+	rootCmd.AddCommand(issuesCmd)
 }

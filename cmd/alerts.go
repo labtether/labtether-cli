@@ -8,7 +8,7 @@ import (
 
 var alertsCmd = &cobra.Command{
 	Use:   "alerts",
-	Short: "Manage alerts",
+	Short: "List and resolve alerts",
 }
 
 var alertsListCmd = &cobra.Command{
@@ -25,8 +25,8 @@ var alertsListCmd = &cobra.Command{
 		}
 		return printList(resp, "instances",
 			col("ID", "id"),
-			col("SEVERITY", "severity"),
-			col("STATUS", "status"),
+			colFormat("SEVERITY", "severity", statusWord),
+			colFormat("STATE", "status", statusWord),
 			colFormat("STARTED", "started_at", timeText),
 			col("RULE", "rule_id"))
 	},

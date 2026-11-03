@@ -8,7 +8,7 @@ import (
 
 var agentsCmd = &cobra.Command{
 	Use:   "agents",
-	Short: "Manage labtether-agent installations",
+	Short: "List agents and approve new ones",
 }
 
 var agentsListCmd = &cobra.Command{
@@ -39,7 +39,7 @@ var agentsListCmd = &cobra.Command{
 
 var agentsGetCmd = &cobra.Command{
 	Use:   "get <id>",
-	Short: "Get an agent asset's details",
+	Short: "Show the device an agent runs on",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -57,7 +57,7 @@ var agentsGetCmd = &cobra.Command{
 
 var agentsPendingCmd = &cobra.Command{
 	Use:   "pending",
-	Short: "List agents awaiting approval",
+	Short: "List agents waiting for approval",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
 		if err != nil {

@@ -8,12 +8,12 @@ import (
 
 var servicesCmd = &cobra.Command{
 	Use:   "services",
-	Short: "Manage system services on assets",
+	Short: "List and control system services on a device",
 }
 
 var servicesListCmd = &cobra.Command{
-	Use:   "list <asset>",
-	Short: "List services on an asset",
+	Use:   "list <device>",
+	Short: "List system services on a device",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := newClient()
@@ -31,7 +31,7 @@ var servicesListCmd = &cobra.Command{
 }
 
 var servicesStartCmd = &cobra.Command{
-	Use:   "start <asset> <service>",
+	Use:   "start <device> <service>",
 	Short: "Start a service",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -49,7 +49,7 @@ var servicesStartCmd = &cobra.Command{
 }
 
 var servicesStopCmd = &cobra.Command{
-	Use:   "stop <asset> <service>",
+	Use:   "stop <device> <service>",
 	Short: "Stop a service",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -67,7 +67,7 @@ var servicesStopCmd = &cobra.Command{
 }
 
 var servicesRestartCmd = &cobra.Command{
-	Use:   "restart <asset> <service>",
+	Use:   "restart <device> <service>",
 	Short: "Restart a service",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
