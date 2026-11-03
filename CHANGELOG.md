@@ -40,6 +40,14 @@ completion show only the new names.
   and `hub agents` show DEVICE (was ASSET). `search` names a device result
   `device`, not `asset`. Column order is unchanged.
 - `whoami` lists "Devices" with `Online` or `Offline` for each.
+- `devices list` shows the same address as the console. It read only the
+  `ip` field, so a TrueNAS, PBS or Portainer device, whose address is its
+  connection's host, showed `-`.
+- `alerts list` names the rule that fired instead of showing its ID, and adds
+  a DEVICE column with the devices the alert fired on.
+- `files ls` shows the modified time in local time, as other tables do, and
+  drops terminal control characters from file names.
+- `whoami` keeps its device columns aligned when a device ID is long.
 - Help text uses plain words and the new names, and its examples use neutral
   hosts such as `nas01` and `pve01`.
 
@@ -61,6 +69,22 @@ completion show only the new names.
   printed help, ran nothing and exited 0; `exec nas01 free -m` failed with only
   "unknown shorthand flag". Both now exit 1 and say to quote the command or
   put it after `--`, as in `exec nas01 -- df -h`.
+
+- `metrics overview` printed `null`. The Hub answers that route without its
+  usual data wrapper; the CLI now prints the devices and their metrics.
+- An `exec` flag with a bad value, such as `--timeout 0`, no longer adds the
+  hint about remote command flags.
+
+### Exit codes
+
+- Configuration errors exit 4, as the CLI guide says. Only a missing hub URL
+  or API key did; a plain-HTTP or malformed hub URL, an API key file with
+  open permissions, a missing or invalid CA file and a broken config file
+  exited 1.
+- `config set-host` checks the URL before saving it. It saved any text, and
+  a plain-HTTP or malformed URL failed only on the next command.
+- `connectors get` with an unknown connector exits 3, like other not-found
+  errors, instead of 1.
 
 ### Install
 

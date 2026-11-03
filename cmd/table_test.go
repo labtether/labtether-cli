@@ -174,3 +174,24 @@ func TestDevicesListShowsStatusWithSince(t *testing.T) {
 		}
 	}
 }
+
+// Lab QA: `devices list` showed no address for a TrueNAS device whose only
+// address is its connection's host, and `alerts list` showed rule IDs with no
+// device, which no CLI command turns into a name.
+func TestListsNameTheAddressRuleAndDevice(t *testing.T) {
+	server := serveHubData(t, map[string]any{
+		"/api/v2/assets": []any{map[string]any{"id": "truenas-nas01", "status": "online",
+			"metadata": map[string]any{"collector_endpoint_host": "192.0.2.10"}}},
+		"/api/v2/alerts": map[string]any{"instances": []any{map[string]any{"id": "ainst_1", "rule_id": "arl_1",
+			"severity": "low", "status": "firing", "firing_scope": map[string]any{"asset_ids": []any{"nas01"}}}}},
+		"/api/v2/alerts/rules": map[string]any{"rules": []any{map[string]any{"id": "arl_1", "name": "Disk nearly full"}}},
+	})
+	stdout, _, err := runConfiguredCmd(t, server.URL, "devices", "list")
+	if err != nil || !strings.Contains(stdout, " 192.0.2.10 ") {
+		t.Fatalf("devices list = %q, err = %v", stdout, err)
+	}
+	stdout, _, err = runConfiguredCmd(t, server.URL, "alerts", "list")
+	if err != nil || !strings.Contains(stdout, "Disk nearly full  nas01") || strings.Contains(stdout, "arl_1") {
+		t.Fatalf("alerts list = %q, err = %v", stdout, err)
+	}
+}
