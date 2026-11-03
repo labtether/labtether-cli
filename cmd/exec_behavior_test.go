@@ -152,6 +152,24 @@ func TestExecCmd_MultiTargetFailsWhenAnyRemoteCommandFails(t *testing.T) {
 	}
 }
 
+// Lab QA: with an API key limited to one device, `exec --targets
+// nas01,pve01 hostname` printed only nas01 and exited 0; the hub drops
+// targets the key cannot reach without saying so.
+func TestExecCmd_MultiTargetReportsTargetsWithoutResult(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"results": map[string]any{
+			"nas01": map[string]any{"status": "succeeded", "exit_code": 0, "stdout": "nas01"},
+		}}})
+	}))
+	defer server.Close()
+
+	stdout, _, err := runConfiguredCmd(t, server.URL, "exec", "--targets", "nas01, pve01,nas01", "hostname")
+	if err == nil || !strings.Contains(err.Error(), "1 of 2 remote commands failed") ||
+		!strings.Contains(stdout, "[pve01] Error: the hub returned no result for this device") {
+		t.Fatalf("stdout=%q err=%v", stdout, err)
+	}
+}
+
 func TestExecCmd_MultiTargetRejectsMissingResults(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{

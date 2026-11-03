@@ -74,6 +74,9 @@ completion show only the new names.
   usual data wrapper; the CLI now prints the devices and their metrics.
 - An `exec` flag with a bad value, such as `--timeout 0`, no longer adds the
   hint about remote command flags.
+- `exec --targets` reports each device that has no result and exits 1. The
+  hub leaves out devices the API key cannot reach, so a key limited to one
+  device printed only that device's output and exited 0.
 
 ### Exit codes
 

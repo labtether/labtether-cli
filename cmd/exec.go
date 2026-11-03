@@ -83,7 +83,10 @@ var execCmd = &cobra.Command{
 					return fmt.Errorf("multi-target result for %s is missing status and exit_code", target)
 				}
 			}
-			failed := 0
+			// The hub leaves out targets the API key cannot reach, without
+			// saying so. Report each requested target that has no result.
+			missing := missingTargets(targets, data.Results)
+			failed := len(missing)
 			for _, target := range targetNames {
 				result := data.Results[target]
 				if result.failed() {
@@ -103,9 +106,14 @@ var execCmd = &cobra.Command{
 					fmt.Fprintf(cmd.OutOrStdout(), "[%s] %s\n", target, result.Stdout)
 				}
 			}
+			if !jsonOutput {
+				for _, target := range missing {
+					fmt.Fprintf(cmd.OutOrStdout(), "[%s] Error: the hub returned no result for this device\n", target)
+				}
+			}
 			if failed > 0 {
 				return remoteCommandError{
-					message:  fmt.Sprintf("%d of %d remote commands failed", failed, len(data.Results)),
+					message:  fmt.Sprintf("%d of %d remote commands failed", failed, len(data.Results)+len(missing)),
 					exitCode: 1,
 				}
 			}
@@ -141,6 +149,24 @@ var execCmd = &cobra.Command{
 		}
 		return nil
 	},
+}
+
+// missingTargets lists the --targets entries, trimmed and without repeats as
+// the hub reads them, that have no result.
+func missingTargets(targets string, results map[string]remoteExecResult) []string {
+	var missing []string
+	seen := map[string]bool{}
+	for _, target := range strings.Split(targets, ",") {
+		target = strings.TrimSpace(target)
+		if target == "" || seen[target] {
+			continue
+		}
+		seen[target] = true
+		if _, found := results[target]; !found {
+			missing = append(missing, target)
+		}
+	}
+	return missing
 }
 
 const execRemoteFlagsHint = "To pass flags to the remote command, quote it or put it after --, " +
