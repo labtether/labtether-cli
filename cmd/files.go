@@ -33,26 +33,20 @@ var filesLsCmd = &cobra.Command{
 			return nil
 		}
 
-		var listing struct {
-			Entries []struct {
-				Name    string `json:"name"`
-				Size    int64  `json:"size"`
-				ModTime string `json:"mod_time"`
-				IsDir   bool   `json:"is_dir"`
-			} `json:"entries"`
-		}
-		if err := decodeResponseList(resp, "entries", &listing.Entries); err != nil {
+		rows, err := decodeTableRows(resp, "entries")
+		if err != nil {
 			return err
 		}
-
-		fmt.Printf("%-10s %-10s %-20s %s\n", "TYPE", "SIZE", "MODIFIED", "NAME")
-		for _, e := range listing.Entries {
-			kind := "file"
-			if e.IsDir {
-				kind = "directory"
-			}
-			fmt.Printf("%-10s %-10d %-20s %s\n", kind, e.Size, e.ModTime, e.Name)
-		}
+		printTable(rows,
+			colFormat("TYPE", "is_dir", func(value any) string {
+				if value == true {
+					return "directory"
+				}
+				return "file"
+			}),
+			col("SIZE", "size"),
+			colFormat("MODIFIED", "mod_time", timeText),
+			col("NAME", "name"))
 		return nil
 	},
 }

@@ -59,7 +59,7 @@ var connectorsGetCmd = &cobra.Command{
 				return nil
 			}
 		}
-		return fmt.Errorf("connector %q not found", args[0])
+		return notFoundError{message: fmt.Sprintf("connector %q not found", args[0])}
 	},
 }
 

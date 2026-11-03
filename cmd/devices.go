@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -46,7 +47,7 @@ var devicesListCmd = &cobra.Command{
 			return fmt.Errorf("failed to parse response: %w", err)
 		}
 		printTable(devices, col("ID", "id"), col("PLATFORM", "platform"), colRow("STATUS", deviceStatus),
-			col("ADDRESS", "metadata.ip"), col("NAME", "name"))
+			colRow("ADDRESS", deviceAddress), col("NAME", "name"))
 		return nil
 	},
 }
@@ -75,4 +76,15 @@ func init() {
 	devicesListCmd.Flags().Bool("online", false, "Show only online devices")
 	devicesCmd.AddCommand(devicesListCmd, devicesGetCmd)
 	rootCmd.AddCommand(devicesCmd)
+}
+
+// deviceAddress is the address the console shows for a device: a TrueNAS,
+// PBS or Portainer device has only its connection's host.
+func deviceAddress(row map[string]any) string {
+	for _, key := range []string{"ip_address", "ip", "primary_ip", "collector_endpoint_host"} {
+		if text, ok := lookupPath(row, "metadata."+key).(string); ok && strings.TrimSpace(text) != "" {
+			return text
+		}
+	}
+	return emptyCell
 }

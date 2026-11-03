@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 )
@@ -48,6 +50,8 @@ var whoamiCmd = &cobra.Command{
 		}
 		if devices, ok := data["available_assets"].([]any); ok {
 			fmt.Printf("Devices:  %d\n", len(devices))
+			// Long device IDs keep the platform and status columns aligned.
+			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 			for _, d := range devices {
 				device, ok := d.(map[string]any)
 				if !ok {
@@ -57,8 +61,9 @@ var whoamiCmd = &cobra.Command{
 				if device["online"] == true {
 					status = "Online"
 				}
-				fmt.Printf("  %-20s %-10s %s\n", cleanCell(cellText(device["id"])), cleanCell(cellText(device["platform"])), status)
+				fmt.Fprintf(w, "  %s\t%s\t%s\n", cleanCell(cellText(device["id"])), cleanCell(cellText(device["platform"])), status)
 			}
+			_ = w.Flush()
 		}
 		return nil
 	},

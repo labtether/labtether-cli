@@ -152,6 +152,24 @@ func TestExecCmd_MultiTargetFailsWhenAnyRemoteCommandFails(t *testing.T) {
 	}
 }
 
+// Lab QA: with an API key limited to one device, `exec --targets
+// nas01,pve01 hostname` printed only nas01 and exited 0; the hub drops
+// targets the key cannot reach without saying so.
+func TestExecCmd_MultiTargetReportsTargetsWithoutResult(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"results": map[string]any{
+			"nas01": map[string]any{"status": "succeeded", "exit_code": 0, "stdout": "nas01"},
+		}}})
+	}))
+	defer server.Close()
+
+	stdout, _, err := runConfiguredCmd(t, server.URL, "exec", "--targets", "nas01, pve01,nas01", "hostname")
+	if err == nil || !strings.Contains(err.Error(), "1 of 2 remote commands failed") ||
+		!strings.Contains(stdout, "[pve01] Error: the hub returned no result for this device") {
+		t.Fatalf("stdout=%q err=%v", stdout, err)
+	}
+}
+
 func TestExecCmd_MultiTargetRejectsMissingResults(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -251,6 +269,15 @@ func TestExecCmd_RemoteCommandFlags(t *testing.T) {
 		if code != tc.code || (tc.code != 0 && !strings.Contains(output, "put it after --")) {
 			t.Fatalf("args=%v: exit code = %d, want %d; output = %q", tc.args, code, tc.code, output)
 		}
+	}
+	// A bad value for exec's own --timeout is not a remote flag: no hint.
+	resetTestCommandState()
+	var stdout, stderr bytes.Buffer
+	rootCmd.SetOut(&stdout)
+	rootCmd.SetErr(&stderr)
+	if code := executeArgs([]string{"exec", "--timeout", "0", "asset-1", "uptime"}); code != 1 ||
+		!strings.Contains(stderr.String(), "between 1 and 300") || strings.Contains(stderr.String(), "put it after --") {
+		t.Fatalf("--timeout 0: exit code = %d, stderr = %q", code, stderr.String())
 	}
 	if len(commands) != 1 || commands[0] != "df -h" {
 		t.Fatalf("remote commands = %q, want only %q", commands, "df -h")

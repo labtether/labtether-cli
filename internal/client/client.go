@@ -212,6 +212,16 @@ func (c *Client) do(method, path string, body any) (*V2Response, error) {
 		}
 		return &v2resp, fmt.Errorf("%s (status %d)", msg, resp.StatusCode)
 	}
+	// A few v2 routes, such as /api/v2/metrics/overview, answer with the
+	// payload itself instead of a data envelope. Use the whole body then.
+	if v2resp.Data == nil {
+		var fields map[string]json.RawMessage
+		if json.Unmarshal(respBody, &fields) == nil {
+			if _, wrapped := fields["data"]; !wrapped {
+				v2resp.Data = json.RawMessage(respBody)
+			}
+		}
+	}
 
 	return &v2resp, nil
 }

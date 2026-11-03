@@ -76,23 +76,7 @@ func executeArgs(args []string) int {
 				rootCmd.Println(executed.UsageString())
 			}
 		}
-		// A failed remote command exits with its own code when known.
-		var remote remoteCommandError
-		if errors.As(err, &remote) {
-			return remote.exitCode
-		}
-		// Determine exit code based on error
-		errStr := err.Error()
-		switch {
-		case strings.Contains(errStr, "(status 401)") || strings.Contains(errStr, "(status 403)"):
-			return 2 // auth error
-		case strings.Contains(errStr, "(status 409)") || strings.Contains(errStr, "(status 404)"):
-			return 3 // device offline or not found
-		case strings.Contains(errStr, "not configured"):
-			return 4 // CLI usage error
-		default:
-			return 1 // general error
-		}
+		return exitCodeFor(err)
 	}
 	return 0
 }
@@ -128,7 +112,17 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Print the result as JSON")
 }
 
+// newClient builds the hub client from flags, environment and the config
+// file. Every error it returns is a settings problem and exits 4.
 func newClient() (*client.Client, error) {
+	c, err := clientFromSettings()
+	if err != nil {
+		return nil, asConfigError(err)
+	}
+	return c, nil
+}
+
+func clientFromSettings() (*client.Client, error) {
 	// Priority: flag > env > config file
 
 	// Config file (lowest priority)
