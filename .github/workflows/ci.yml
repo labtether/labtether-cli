@@ -1,8 +1,13 @@
 name: CI
 on:
   workflow_dispatch:
+  # main requires an up-to-date branch, so the pull request run already
+  # tested the merged code. Run on main only when dependencies change, to
+  # refresh the caches pull requests read.
   push:
     branches: [main]
+    paths:
+      - go.sum
   pull_request:
 
 concurrency:
