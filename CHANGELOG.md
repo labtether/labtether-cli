@@ -2,6 +2,11 @@
 
 All notable changes to the LabTether CLI.
 
+## v2.0.1
+
+No change to the CLI since v2.0.0. It is released again so that every part of
+LabTether 2.0.1 carries the same version. It works with Hub 2.0.0 and 2.0.1.
+
 ## v2.0.0
 
 Changes since v1.7.1. The CLI takes the LabTether 2.0 version with the Hub and
