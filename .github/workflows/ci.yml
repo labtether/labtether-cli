@@ -165,10 +165,41 @@ jobs:
       - name: Run focused credential, permission, and TLS tests with race detection
         run: go test -race ./cmd ./internal/client
 
+  # The Rust CLI (rust/) has its own checks. The rust-cli contract selects
+  # them when rust/ or the route table it shares with the Go tests changes.
+  rust-cli:
+    name: Rust CLI
+    needs: qa-contracts
+    if: needs.qa-contracts.outputs.checks_required != 'false' && contains(format(',{0},', needs.qa-contracts.outputs.contracts), ',rust-cli,')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Update stable Rust
+        run: rustup update stable --no-self-update
+      - name: Check formatting
+        run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --locked
+      # Linux only: the one Windows-only file (the config file ACL) is
+      # compiled and linted here for Windows; it has no C dependencies, so no
+      # Windows runner is needed. Its behaviour is checked on the Windows lab VM.
+      - name: Lint the Windows config ACL code
+        run: |
+          rustup target add x86_64-pc-windows-gnu
+          cargo clippy --locked -p labtether-cli-platform --all-targets --target x86_64-pc-windows-gnu -- -D warnings
+
   ci-result:
     name: CI result
     if: always()
-    needs: [line-limit, qa-contracts, build-and-test, installed-cli-package, cross-platform-build, tls-permission-behavior]
+    needs: [line-limit, qa-contracts, build-and-test, installed-cli-package, cross-platform-build, tls-permission-behavior, rust-cli]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -193,7 +224,7 @@ jobs:
           # GitHub drops empty job outputs, so no selected contracts arrives
           # as a missing key. checks_required and mode prove the selector ran.
           contracts = outputs.get("contracts", "")
-          contract_jobs = {"installed-cli-package", "cross-platform-build", "tls-permission-behavior"}
+          contract_jobs = {"installed-cli-package", "cross-platform-build", "tls-permission-behavior", "rust-cli"}
           if checks not in ("true", "false") or mode not in ("auto", "full"):
               errors.append("QA selector returned invalid checks_required or mode")
           selected = set(contracts.split(",")) if isinstance(contracts, str) and contracts else set()

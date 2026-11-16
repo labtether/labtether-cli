@@ -28,18 +28,8 @@ func TestOldCommandNamesStillRun(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"data": payload})
 	}))
 	defer server.Close()
-	for _, tc := range []struct{ old, current string }{
-		{"assets list", "devices list"},
-		{"assets get nas01", "devices get nas01"},
-		{"incidents list", "issues list"},
-		{"incidents ack i1", "issues investigate i1"},
-		{"incidents resolve i1", "issues resolve i1"},
-		{"topology edges pve01", "map connections pve01"},
-		{"topology blast-radius pve01", "map downstream pve01"},
-		{"topology upstream pve01", "map upstream pve01"},
-		{"topology dependencies pve01", "map dependencies pve01"},
-		{"metrics asset nas01", "metrics device nas01"},
-	} {
+	for _, pair := range loadSharedRoutes(t).Renamed {
+		tc := struct{ old, current string }{pair.Old, pair.Current}
 		t.Run(tc.old, func(t *testing.T) {
 			requests = nil
 			oldOut, oldErr, err := runConfiguredCmd(t, server.URL, strings.Fields(tc.old)...)

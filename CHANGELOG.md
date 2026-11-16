@@ -2,6 +2,12 @@
 
 All notable changes to the LabTether CLI.
 
+## Unreleased
+
+- A Rust build of the CLI is in `rust/`. It is not released. It runs the
+  commands that only read from the hub, plus `config`, and refuses every
+  other command; see `rust/README.md`.
+
 ## v2.0.1
 
 No change to the CLI since v2.0.0. It is released again so that every part of

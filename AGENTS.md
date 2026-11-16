@@ -112,3 +112,11 @@ Read user-facing text once against this list before you ship it.
   changes. `go.mod` sets the Go version.
 - The CLI joins the workspace prerequisite release stage; tag it only through
   the staged release script.
+- `rust/` is a Rust build of the CLI (`labtether-cli-rs`), not released yet.
+  It copies the Go CLI's commands, flags, settings, output and exit codes for
+  the commands that only read, and refuses the rest with "not in the Rust
+  build yet". `testdata/hub-routes.json` is the command-to-route table that
+  both the Go tests and the Rust tests read; add a row there for any new
+  command. Rust checks: `cargo fmt --check`, `cargo clippy --locked
+  --all-targets -- -D warnings` and `cargo test --locked` in `rust/`, on the
+  lab machines (see `rust/README.md`).

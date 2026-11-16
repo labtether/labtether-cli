@@ -4,107 +4,107 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
-func TestCommandsUseCurrentHubRoutes(t *testing.T) {
-	checks := []struct {
-		name   string
-		args   []string
-		method string
-		path   string
-		data   any
-	}{
-		{"checks list", []string{"checks", "list"}, "GET", "/api/v2/synthetic-checks", map[string]any{"checks": []any{}}},
-		{"checks get", []string{"checks", "get", "check-1"}, "GET", "/api/v2/synthetic-checks/check-1", map[string]any{}},
-		{"credentials list", []string{"credentials", "list"}, "GET", "/api/v2/credentials/profiles", map[string]any{"profiles": []any{}}},
-		{"credentials get", []string{"credentials", "get", "profile-1"}, "GET", "/api/v2/credentials/profiles/profile-1", map[string]any{}},
-		{"web services list", []string{"web-services", "list"}, "GET", "/api/v2/web-services", map[string]any{"services": []any{}}},
-		{"web services sync", []string{"web-services", "sync"}, "POST", "/api/v2/web-services/sync", map[string]any{}},
-		{"tls status", []string{"tls", "status"}, "GET", "/api/v2/hub/tls", map[string]any{}},
-		{"failover list", []string{"failover", "list"}, "GET", "/api/v2/failover-pairs", map[string]any{"pairs": []any{}}},
-		{"failover get", []string{"failover", "get", "pair-1"}, "GET", "/api/v2/failover-pairs/pair-1", map[string]any{}},
-		{"failover readiness", []string{"failover", "check-readiness", "pair-1"}, "POST", "/api/v2/failover-pairs/pair-1/check-readiness", map[string]any{}},
-		{"dependencies", []string{"map", "dependencies", "asset-1"}, "GET", "/api/v2/dependencies?asset_id=asset-1", map[string]any{}},
-		{"downstream", []string{"map", "downstream", "asset-1"}, "GET", "/api/v2/edges/tree?root=asset-1", map[string]any{}},
-		{"upstream", []string{"map", "upstream", "asset-1"}, "GET", "/api/v2/edges/ancestors?id=asset-1", map[string]any{}},
-		{"connections", []string{"map", "connections", "asset-1"}, "GET", "/api/v2/edges?asset_id=asset-1", map[string]any{}},
-		{"discovery dismiss", []string{"discovery", "dismiss", "proposal-1"}, "POST", "/api/v2/discovery/proposals/proposal-1/dismiss", map[string]any{}},
-		{"truenas overview", []string{"truenas", "get", "nas-1"}, "GET", "/api/v2/truenas/assets/nas-1/overview", map[string]any{}},
-		{"pbs details", []string{"pbs", "get", "pbs-1"}, "GET", "/api/v2/pbs/assets/pbs-1/details", map[string]any{}},
-		{"portainer overview", []string{"portainer", "get", "env-1"}, "GET", "/api/v2/portainer/assets/env-1/overview", map[string]any{}},
-		{"proxmox resources", []string{"proxmox", "resources"}, "GET", "/api/v2/proxmox/cluster/resources", map[string]any{"resources": []any{}}},
-		{"proxmox nodes", []string{"proxmox", "nodes"}, "GET", "/api/v2/proxmox/cluster/resources", map[string]any{"resources": []any{}}},
-		{"proxmox details", []string{"proxmox", "get", "vm-1"}, "GET", "/api/v2/proxmox/assets/vm-1/details", map[string]any{}},
-		{"agent asset", []string{"agents", "get", "agent-1"}, "GET", "/api/v2/assets/agent-1", map[string]any{}},
-		{"alert resolve", []string{"alerts", "resolve", "alert-1"}, "POST", "/api/v2/alerts/alert-1/resolve", map[string]any{}},
-		{"package upgrade", []string{"packages", "update", "agent-1"}, "POST", "/api/v2/assets/agent-1/packages/upgrade", map[string]any{}},
+// The command-to-route cases live in testdata/hub-routes.json, which the
+// Rust CLI's tests read too, so a command cannot be added to one CLI
+// without the other.
+type sharedRouteTable struct {
+	Routes []struct {
+		Name   string   `json:"name"`
+		Args   []string `json:"args"`
+		Method string   `json:"method"`
+		Path   string   `json:"path"`
+		Data   any      `json:"data"`
+	} `json:"routes"`
+	Local         []string `json:"local"`
+	ListEnvelopes []struct {
+		Name string   `json:"name"`
+		Args []string `json:"args"`
+		Data any      `json:"data"`
+	} `json:"list_envelopes"`
+	Renamed []struct {
+		Old     string `json:"old"`
+		Current string `json:"current"`
+	} `json:"renamed"`
+}
+
+func loadSharedRoutes(t *testing.T) sharedRouteTable {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "testdata", "hub-routes.json"))
+	if err != nil {
+		t.Fatalf("read shared route table: %v", err)
 	}
-	for _, tc := range checks {
-		t.Run(tc.name, func(t *testing.T) {
+	var table sharedRouteTable
+	if err := json.Unmarshal(data, &table); err != nil {
+		t.Fatalf("parse shared route table: %v", err)
+	}
+	return table
+}
+
+func TestCommandsUseCurrentHubRoutes(t *testing.T) {
+	for _, tc := range loadSharedRoutes(t).Routes {
+		t.Run(tc.Name, func(t *testing.T) {
 			var gotMethod, gotPath string
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				gotMethod, gotPath = r.Method, r.URL.RequestURI()
-				_ = json.NewEncoder(w).Encode(map[string]any{"data": tc.data})
+				_ = json.NewEncoder(w).Encode(map[string]any{"data": tc.Data})
 			}))
 			defer server.Close()
-			_, _, err := runConfiguredCmd(t, server.URL, tc.args...)
+			_, _, err := runConfiguredCmd(t, server.URL, tc.Args...)
 			if err != nil {
 				t.Fatalf("command failed: %v", err)
 			}
-			if gotMethod != tc.method || gotPath != tc.path {
-				t.Fatalf("request %s %s, want %s %s", gotMethod, gotPath, tc.method, tc.path)
+			if gotMethod != tc.Method || gotPath != tc.Path {
+				t.Fatalf("request %s %s, want %s %s", gotMethod, gotPath, tc.Method, tc.Path)
 			}
 		})
 	}
 }
 
+// Every runnable command must have a case in the shared route table, or be
+// listed there as local, so the Rust CLI's tests see it too.
+func TestRouteTableCoversEveryCommand(t *testing.T) {
+	table := loadSharedRoutes(t)
+	covered := map[*cobra.Command]bool{}
+	for _, tc := range table.Routes {
+		cmd, _, err := rootCmd.Find(tc.Args)
+		if err != nil || cmd == rootCmd {
+			t.Fatalf("route %q names no command: %v", tc.Name, err)
+		}
+		covered[cmd] = true
+	}
+	local := map[string]bool{}
+	for _, name := range table.Local {
+		local[name] = true
+	}
+	var walk func(*cobra.Command)
+	walk = func(cmd *cobra.Command) {
+		for _, child := range cmd.Commands() {
+			name := strings.TrimPrefix(child.CommandPath(), rootCmd.Name()+" ")
+			if child.Runnable() && !child.Hidden && !covered[child] && !local[name] {
+				t.Errorf("command %q has no case in testdata/hub-routes.json", name)
+			}
+			walk(child)
+		}
+	}
+	walk(rootCmd)
+}
+
 func TestHumanOutputCommandsAcceptHubListEnvelopes(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		args []string
-		data any
-	}{
-		{"docker hosts", []string{"docker", "hosts"}, map[string]any{"hosts": []any{}}},
-		{"docker hosts null", []string{"docker", "hosts"}, map[string]any{"hosts": nil}},
-		{"docker containers", []string{"docker", "ps", "host-1"}, map[string]any{"containers": []any{}}},
-		{"docker containers null", []string{"docker", "ps", "host-1"}, map[string]any{"containers": nil}},
-		{"file listing", []string{"files", "ls", "agent-1", "/tmp"}, map[string]any{"entries": []any{}}},
-		{"file listing null", []string{"files", "ls", "agent-1", "/tmp"}, map[string]any{"entries": nil}},
-		{"process listing", []string{"ps", "list", "agent-1"}, map[string]any{"processes": []any{}}},
-		{"process listing null", []string{"ps", "list", "agent-1"}, map[string]any{"processes": nil, "request_id": "agent-request"}},
-		{"agents pending", []string{"agents", "pending"}, map[string]any{"count": 0, "agents": []any{}}},
-		{"services null", []string{"services", "list", "agent-1"}, map[string]any{"services": nil, "request_id": "agent-request"}},
-		{"alerts", []string{"alerts", "list"}, map[string]any{"instances": []any{}}},
-		{"collectors", []string{"collectors", "list"}, map[string]any{"collectors": []any{}}},
-		{"connectors", []string{"connectors", "list"}, map[string]any{"connectors": []any{}}},
-		{"groups", []string{"groups", "list"}, map[string]any{"groups": []any{}}},
-		{"issues", []string{"issues", "list"}, map[string]any{"incidents": []any{}}},
-		{"update plans", []string{"updates", "plans", "list"}, map[string]any{"plans": []any{}}},
-		{"update runs", []string{"updates", "runs", "list"}, map[string]any{"runs": []any{}}},
-		{"notification channels", []string{"notifications", "channels"}, map[string]any{"channels": []any{}, "capabilities": map[string]any{}}},
-		{"notification history", []string{"notifications", "history"}, map[string]any{"history": []any{}}},
-		{"discovery proposals", []string{"discovery", "proposals"}, map[string]any{"proposals": []any{}}},
-		{"ha entities", []string{"ha", "entities"}, map[string]any{"entities": []any{}, "count": 0}},
-		{"audit events", []string{"audit"}, map[string]any{"events": []any{}}},
-		{"hub agents", []string{"hub", "agents"}, map[string]any{"count": 0, "presence": []any{}}},
-		{"proxmox resources null", []string{"proxmox", "resources"}, map[string]any{"resources": nil}},
-		{"packages", []string{"packages", "list", "agent-1"}, map[string]any{"packages": []any{}, "request_id": "agent-request"}},
-		{"user sessions null", []string{"users", "agent-1"}, map[string]any{"sessions": nil, "request_id": "agent-request"}},
-		{"disk mounts null", []string{"disks", "agent-1"}, map[string]any{"mounts": nil, "request_id": "agent-request"}},
-		{"network interfaces null", []string{"net", "agent-1"}, map[string]any{"interfaces": nil, "request_id": "agent-request"}},
-		{"cron entries null", []string{"cron", "agent-1"}, map[string]any{"entries": nil, "request_id": "agent-request"}},
-		{"pbs snapshots", []string{"pbs", "snapshots", "pbs-1"}, map[string]any{"store": "main", "snapshots": []any{}}},
-		{"portainer stacks", []string{"portainer", "stacks", "env-1"}, map[string]any{"data": []any{}}},
-		{"portainer containers null", []string{"portainer", "containers", "env-1"}, map[string]any{"data": nil}},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, tc := range loadSharedRoutes(t).ListEnvelopes {
+		t.Run(tc.Name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				_ = json.NewEncoder(w).Encode(map[string]any{"data": tc.data})
+				_ = json.NewEncoder(w).Encode(map[string]any{"data": tc.Data})
 			}))
 			defer server.Close()
-			if _, _, err := runConfiguredCmd(t, server.URL, tc.args...); err != nil {
+			if _, _, err := runConfiguredCmd(t, server.URL, tc.Args...); err != nil {
 				t.Fatalf("valid Hub response rejected: %v", err)
 			}
 		})

@@ -1,0 +1,1594 @@
+{
+  "_comment": [
+    "Shared by cmd/hub_compat_test.go, cmd/renamed_commands_test.go and rust/cli/tests/shared_routes.rs.",
+    "routes: every runnable command with the method and path of its last Hub request and the data the stand-in Hub answers with.",
+    "local: runnable commands that make no Hub request.",
+    "list_envelopes: Hub list payloads the table commands must accept, including null lists.",
+    "renamed: 2.0 command names and the old names that must keep working."
+  ],
+  "routes": [
+    {
+      "name": "checks list",
+      "args": [
+        "checks",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/synthetic-checks",
+      "data": {
+        "checks": []
+      }
+    },
+    {
+      "name": "checks get",
+      "args": [
+        "checks",
+        "get",
+        "check-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/synthetic-checks/check-1",
+      "data": {}
+    },
+    {
+      "name": "credentials list",
+      "args": [
+        "credentials",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/credentials/profiles",
+      "data": {
+        "profiles": []
+      }
+    },
+    {
+      "name": "credentials get",
+      "args": [
+        "credentials",
+        "get",
+        "profile-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/credentials/profiles/profile-1",
+      "data": {}
+    },
+    {
+      "name": "web services list",
+      "args": [
+        "web-services",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/web-services",
+      "data": {
+        "services": []
+      }
+    },
+    {
+      "name": "web services sync",
+      "args": [
+        "web-services",
+        "sync"
+      ],
+      "method": "POST",
+      "path": "/api/v2/web-services/sync",
+      "data": {}
+    },
+    {
+      "name": "tls status",
+      "args": [
+        "tls",
+        "status"
+      ],
+      "method": "GET",
+      "path": "/api/v2/hub/tls",
+      "data": {}
+    },
+    {
+      "name": "failover list",
+      "args": [
+        "failover",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/failover-pairs",
+      "data": {
+        "pairs": []
+      }
+    },
+    {
+      "name": "failover get",
+      "args": [
+        "failover",
+        "get",
+        "pair-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/failover-pairs/pair-1",
+      "data": {}
+    },
+    {
+      "name": "failover readiness",
+      "args": [
+        "failover",
+        "check-readiness",
+        "pair-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/failover-pairs/pair-1/check-readiness",
+      "data": {}
+    },
+    {
+      "name": "dependencies",
+      "args": [
+        "map",
+        "dependencies",
+        "asset-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/dependencies?asset_id=asset-1",
+      "data": {}
+    },
+    {
+      "name": "downstream",
+      "args": [
+        "map",
+        "downstream",
+        "asset-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/edges/tree?root=asset-1",
+      "data": {}
+    },
+    {
+      "name": "upstream",
+      "args": [
+        "map",
+        "upstream",
+        "asset-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/edges/ancestors?id=asset-1",
+      "data": {}
+    },
+    {
+      "name": "connections",
+      "args": [
+        "map",
+        "connections",
+        "asset-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/edges?asset_id=asset-1",
+      "data": {}
+    },
+    {
+      "name": "discovery dismiss",
+      "args": [
+        "discovery",
+        "dismiss",
+        "proposal-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/discovery/proposals/proposal-1/dismiss",
+      "data": {}
+    },
+    {
+      "name": "truenas overview",
+      "args": [
+        "truenas",
+        "get",
+        "nas-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/truenas/assets/nas-1/overview",
+      "data": {}
+    },
+    {
+      "name": "pbs details",
+      "args": [
+        "pbs",
+        "get",
+        "pbs-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/pbs/assets/pbs-1/details",
+      "data": {}
+    },
+    {
+      "name": "portainer overview",
+      "args": [
+        "portainer",
+        "get",
+        "env-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/portainer/assets/env-1/overview",
+      "data": {}
+    },
+    {
+      "name": "proxmox resources",
+      "args": [
+        "proxmox",
+        "resources"
+      ],
+      "method": "GET",
+      "path": "/api/v2/proxmox/cluster/resources",
+      "data": {
+        "resources": []
+      }
+    },
+    {
+      "name": "proxmox nodes",
+      "args": [
+        "proxmox",
+        "nodes"
+      ],
+      "method": "GET",
+      "path": "/api/v2/proxmox/cluster/resources",
+      "data": {
+        "resources": []
+      }
+    },
+    {
+      "name": "proxmox details",
+      "args": [
+        "proxmox",
+        "get",
+        "vm-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/proxmox/assets/vm-1/details",
+      "data": {}
+    },
+    {
+      "name": "agent asset",
+      "args": [
+        "agents",
+        "get",
+        "agent-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/agent-1",
+      "data": {}
+    },
+    {
+      "name": "alert resolve",
+      "args": [
+        "alerts",
+        "resolve",
+        "alert-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/alerts/alert-1/resolve",
+      "data": {}
+    },
+    {
+      "name": "package upgrade",
+      "args": [
+        "packages",
+        "update",
+        "agent-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/assets/agent-1/packages/upgrade",
+      "data": {}
+    },
+    {
+      "name": "agents list",
+      "args": [
+        "agents",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/agents",
+      "data": {
+        "assetsInfo": []
+      }
+    },
+    {
+      "name": "agents pending",
+      "args": [
+        "agents",
+        "pending"
+      ],
+      "method": "GET",
+      "path": "/api/v2/agents/pending",
+      "data": {
+        "agents": []
+      }
+    },
+    {
+      "name": "agents approve",
+      "args": [
+        "agents",
+        "approve",
+        "pending-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/agents/pending/approve",
+      "data": {}
+    },
+    {
+      "name": "agents reject",
+      "args": [
+        "agents",
+        "reject",
+        "pending-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/agents/pending/reject",
+      "data": {}
+    },
+    {
+      "name": "alerts list",
+      "args": [
+        "alerts",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/alerts/rules",
+      "data": {
+        "instances": [],
+        "rules": []
+      }
+    },
+    {
+      "name": "alerts ack",
+      "args": [
+        "alerts",
+        "ack",
+        "alert-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/alerts/alert-1/ack",
+      "data": {}
+    },
+    {
+      "name": "audit",
+      "args": [
+        "audit"
+      ],
+      "method": "GET",
+      "path": "/api/v2/audit/events",
+      "data": {
+        "events": []
+      }
+    },
+    {
+      "name": "collectors list",
+      "args": [
+        "collectors",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/collectors",
+      "data": {
+        "collectors": []
+      }
+    },
+    {
+      "name": "collectors get",
+      "args": [
+        "collectors",
+        "get",
+        "collector-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/collectors/collector-1",
+      "data": {}
+    },
+    {
+      "name": "connectors list",
+      "args": [
+        "connectors",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/connectors",
+      "data": {
+        "connectors": []
+      }
+    },
+    {
+      "name": "connectors get",
+      "args": [
+        "connectors",
+        "get",
+        "proxmox"
+      ],
+      "method": "GET",
+      "path": "/api/v2/connectors",
+      "data": {
+        "connectors": [
+          {
+            "id": "proxmox"
+          }
+        ]
+      }
+    },
+    {
+      "name": "connectors test",
+      "args": [
+        "connectors",
+        "test",
+        "docker"
+      ],
+      "method": "POST",
+      "path": "/api/v2/connectors/docker/test",
+      "data": {}
+    },
+    {
+      "name": "cron",
+      "args": [
+        "cron",
+        "agent-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/agent-1/cron",
+      "data": {
+        "entries": []
+      }
+    },
+    {
+      "name": "devices list",
+      "args": [
+        "devices",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets",
+      "data": []
+    },
+    {
+      "name": "devices list online",
+      "args": [
+        "devices",
+        "list",
+        "--online"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets?status=online",
+      "data": []
+    },
+    {
+      "name": "devices get",
+      "args": [
+        "devices",
+        "get",
+        "asset-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/asset-1",
+      "data": {}
+    },
+    {
+      "name": "discovery run",
+      "args": [
+        "discovery",
+        "run"
+      ],
+      "method": "POST",
+      "path": "/api/v2/discovery/run",
+      "data": {}
+    },
+    {
+      "name": "discovery proposals",
+      "args": [
+        "discovery",
+        "proposals"
+      ],
+      "method": "GET",
+      "path": "/api/v2/discovery/proposals",
+      "data": {
+        "proposals": []
+      }
+    },
+    {
+      "name": "discovery accept",
+      "args": [
+        "discovery",
+        "accept",
+        "proposal-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/discovery/proposals/proposal-1/accept",
+      "data": {}
+    },
+    {
+      "name": "disks",
+      "args": [
+        "disks",
+        "agent-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/agent-1/disks",
+      "data": {
+        "mounts": []
+      }
+    },
+    {
+      "name": "docker hosts",
+      "args": [
+        "docker",
+        "hosts"
+      ],
+      "method": "GET",
+      "path": "/api/v2/docker/hosts",
+      "data": {
+        "hosts": []
+      }
+    },
+    {
+      "name": "docker ps",
+      "args": [
+        "docker",
+        "ps",
+        "host-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/docker/hosts/host-1/containers",
+      "data": {
+        "containers": []
+      }
+    },
+    {
+      "name": "docker start",
+      "args": [
+        "docker",
+        "start",
+        "container-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/docker/containers/container-1/action",
+      "data": {
+        "result": {
+          "status": "succeeded"
+        }
+      }
+    },
+    {
+      "name": "docker stop",
+      "args": [
+        "docker",
+        "stop",
+        "container-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/docker/containers/container-1/action",
+      "data": {
+        "result": {
+          "status": "succeeded"
+        }
+      }
+    },
+    {
+      "name": "docker restart",
+      "args": [
+        "docker",
+        "restart",
+        "container-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/docker/containers/container-1/action",
+      "data": {
+        "result": {
+          "status": "succeeded"
+        }
+      }
+    },
+    {
+      "name": "docker logs",
+      "args": [
+        "docker",
+        "logs",
+        "container-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/docker/containers/container-1/logs?tail=100",
+      "data": {
+        "logs": ""
+      }
+    },
+    {
+      "name": "exec",
+      "args": [
+        "exec",
+        "asset-1",
+        "uptime"
+      ],
+      "method": "POST",
+      "path": "/api/v2/assets/asset-1/exec",
+      "data": {
+        "exit_code": 0,
+        "stdout": ""
+      }
+    },
+    {
+      "name": "files ls",
+      "args": [
+        "files",
+        "ls",
+        "agent-1",
+        "/tmp"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/agent-1/files?path=%2Ftmp",
+      "data": {
+        "entries": []
+      }
+    },
+    {
+      "name": "files cat",
+      "args": [
+        "files",
+        "cat",
+        "agent-1",
+        "/tmp/x"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/agent-1/files/read?path=%2Ftmp%2Fx",
+      "data": {}
+    },
+    {
+      "name": "groups list",
+      "args": [
+        "groups",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/groups",
+      "data": {
+        "groups": []
+      }
+    },
+    {
+      "name": "groups get",
+      "args": [
+        "groups",
+        "get",
+        "group-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/groups/group-1",
+      "data": {}
+    },
+    {
+      "name": "groups create",
+      "args": [
+        "groups",
+        "create",
+        "--name",
+        "lab"
+      ],
+      "method": "POST",
+      "path": "/api/v2/groups",
+      "data": {}
+    },
+    {
+      "name": "ha entities",
+      "args": [
+        "ha",
+        "entities"
+      ],
+      "method": "GET",
+      "path": "/api/v2/homeassistant/entities",
+      "data": {
+        "entities": []
+      }
+    },
+    {
+      "name": "ha entity",
+      "args": [
+        "ha",
+        "entity",
+        "ha-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/homeassistant/entities/ha-1",
+      "data": {}
+    },
+    {
+      "name": "ha call",
+      "args": [
+        "ha",
+        "call",
+        "ha-1",
+        "switch.turn_on"
+      ],
+      "method": "POST",
+      "path": "/api/v2/homeassistant/entities/ha-1",
+      "data": {}
+    },
+    {
+      "name": "hub status",
+      "args": [
+        "hub",
+        "status"
+      ],
+      "method": "GET",
+      "path": "/api/v2/hub/status",
+      "data": {}
+    },
+    {
+      "name": "hub agents",
+      "args": [
+        "hub",
+        "agents"
+      ],
+      "method": "GET",
+      "path": "/api/v2/hub/agents",
+      "data": {
+        "presence": []
+      }
+    },
+    {
+      "name": "issues list",
+      "args": [
+        "issues",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/incidents",
+      "data": {
+        "incidents": []
+      }
+    },
+    {
+      "name": "issues get",
+      "args": [
+        "issues",
+        "get",
+        "incident-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/incidents/incident-1",
+      "data": {}
+    },
+    {
+      "name": "issues investigate",
+      "args": [
+        "issues",
+        "investigate",
+        "incident-1"
+      ],
+      "method": "PATCH",
+      "path": "/api/v2/incidents/incident-1",
+      "data": {}
+    },
+    {
+      "name": "issues resolve",
+      "args": [
+        "issues",
+        "resolve",
+        "incident-1"
+      ],
+      "method": "PATCH",
+      "path": "/api/v2/incidents/incident-1",
+      "data": {}
+    },
+    {
+      "name": "metrics overview",
+      "args": [
+        "metrics",
+        "overview"
+      ],
+      "method": "GET",
+      "path": "/api/v2/metrics/overview",
+      "data": {}
+    },
+    {
+      "name": "metrics device",
+      "args": [
+        "metrics",
+        "device",
+        "asset-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/asset-1/metrics",
+      "data": {}
+    },
+    {
+      "name": "net",
+      "args": [
+        "net",
+        "agent-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/agent-1/network",
+      "data": {
+        "interfaces": []
+      }
+    },
+    {
+      "name": "notifications channels",
+      "args": [
+        "notifications",
+        "channels"
+      ],
+      "method": "GET",
+      "path": "/api/v2/notifications/channels",
+      "data": {
+        "channels": []
+      }
+    },
+    {
+      "name": "notifications history",
+      "args": [
+        "notifications",
+        "history"
+      ],
+      "method": "GET",
+      "path": "/api/v2/notifications/history",
+      "data": {
+        "history": []
+      }
+    },
+    {
+      "name": "packages list",
+      "args": [
+        "packages",
+        "list",
+        "agent-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/agent-1/packages",
+      "data": {
+        "packages": []
+      }
+    },
+    {
+      "name": "packages install",
+      "args": [
+        "packages",
+        "install",
+        "agent-1",
+        "curl"
+      ],
+      "method": "POST",
+      "path": "/api/v2/assets/agent-1/packages/install",
+      "data": {}
+    },
+    {
+      "name": "pbs datastores",
+      "args": [
+        "pbs",
+        "datastores",
+        "pbs-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/pbs/assets/pbs-1/details",
+      "data": {}
+    },
+    {
+      "name": "pbs snapshots",
+      "args": [
+        "pbs",
+        "snapshots",
+        "pbs-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/pbs/assets/pbs-1/snapshots",
+      "data": {
+        "snapshots": []
+      }
+    },
+    {
+      "name": "portainer stacks",
+      "args": [
+        "portainer",
+        "stacks",
+        "env-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/portainer/assets/env-1/stacks",
+      "data": {
+        "data": []
+      }
+    },
+    {
+      "name": "portainer containers",
+      "args": [
+        "portainer",
+        "containers",
+        "env-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/portainer/assets/env-1/containers",
+      "data": {
+        "data": []
+      }
+    },
+    {
+      "name": "proxmox cluster status",
+      "args": [
+        "proxmox",
+        "cluster-status"
+      ],
+      "method": "GET",
+      "path": "/api/v2/proxmox/cluster/status",
+      "data": {}
+    },
+    {
+      "name": "proxmox ceph status",
+      "args": [
+        "proxmox",
+        "ceph-status"
+      ],
+      "method": "GET",
+      "path": "/api/v2/proxmox/ceph/status",
+      "data": {}
+    },
+    {
+      "name": "proxmox start",
+      "args": [
+        "proxmox",
+        "start",
+        "vm-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/connectors/proxmox/actions/vm.start/execute",
+      "data": {
+        "asset": {
+          "source": "proxmox",
+          "type": "vm"
+        },
+        "status": "succeeded"
+      }
+    },
+    {
+      "name": "proxmox stop",
+      "args": [
+        "proxmox",
+        "stop",
+        "vm-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/connectors/proxmox/actions/vm.stop/execute",
+      "data": {
+        "asset": {
+          "source": "proxmox",
+          "type": "vm"
+        },
+        "status": "succeeded"
+      }
+    },
+    {
+      "name": "proxmox restart",
+      "args": [
+        "proxmox",
+        "restart",
+        "vm-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/connectors/proxmox/actions/vm.reboot/execute",
+      "data": {
+        "asset": {
+          "source": "proxmox",
+          "type": "vm"
+        },
+        "status": "succeeded"
+      }
+    },
+    {
+      "name": "ps list",
+      "args": [
+        "ps",
+        "list",
+        "agent-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/agent-1/processes",
+      "data": {
+        "processes": []
+      }
+    },
+    {
+      "name": "ps kill",
+      "args": [
+        "ps",
+        "kill",
+        "agent-1",
+        "123"
+      ],
+      "method": "POST",
+      "path": "/api/v2/assets/agent-1/processes/kill",
+      "data": {}
+    },
+    {
+      "name": "reboot",
+      "args": [
+        "reboot",
+        "asset-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/assets/asset-1/reboot",
+      "data": {}
+    },
+    {
+      "name": "shutdown",
+      "args": [
+        "shutdown",
+        "asset-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/assets/asset-1/shutdown",
+      "data": {}
+    },
+    {
+      "name": "wake",
+      "args": [
+        "wake",
+        "asset-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/assets/asset-1/wake",
+      "data": {}
+    },
+    {
+      "name": "search",
+      "args": [
+        "search",
+        "nas"
+      ],
+      "method": "GET",
+      "path": "/api/v2/search?q=nas",
+      "data": {}
+    },
+    {
+      "name": "services list",
+      "args": [
+        "services",
+        "list",
+        "agent-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/agent-1/services",
+      "data": {
+        "services": []
+      }
+    },
+    {
+      "name": "services start",
+      "args": [
+        "services",
+        "start",
+        "agent-1",
+        "nginx"
+      ],
+      "method": "POST",
+      "path": "/api/v2/assets/agent-1/services/nginx/start",
+      "data": {}
+    },
+    {
+      "name": "services stop",
+      "args": [
+        "services",
+        "stop",
+        "agent-1",
+        "nginx"
+      ],
+      "method": "POST",
+      "path": "/api/v2/assets/agent-1/services/nginx/stop",
+      "data": {}
+    },
+    {
+      "name": "services restart",
+      "args": [
+        "services",
+        "restart",
+        "agent-1",
+        "nginx"
+      ],
+      "method": "POST",
+      "path": "/api/v2/assets/agent-1/services/nginx/restart",
+      "data": {}
+    },
+    {
+      "name": "truenas pools",
+      "args": [
+        "truenas",
+        "pools",
+        "nas-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/truenas/assets/nas-1/pools",
+      "data": {}
+    },
+    {
+      "name": "truenas datasets",
+      "args": [
+        "truenas",
+        "datasets",
+        "nas-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/truenas/assets/nas-1/datasets",
+      "data": {}
+    },
+    {
+      "name": "truenas shares",
+      "args": [
+        "truenas",
+        "shares",
+        "nas-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/truenas/assets/nas-1/shares",
+      "data": {}
+    },
+    {
+      "name": "update plans list",
+      "args": [
+        "updates",
+        "plans",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/updates/plans",
+      "data": {
+        "plans": []
+      }
+    },
+    {
+      "name": "update plan execute",
+      "args": [
+        "updates",
+        "plans",
+        "execute",
+        "plan-1"
+      ],
+      "method": "POST",
+      "path": "/api/v2/updates/plans/plan-1/execute",
+      "data": {}
+    },
+    {
+      "name": "update runs list",
+      "args": [
+        "updates",
+        "runs",
+        "list"
+      ],
+      "method": "GET",
+      "path": "/api/v2/updates/runs",
+      "data": {
+        "runs": []
+      }
+    },
+    {
+      "name": "update runs get",
+      "args": [
+        "updates",
+        "runs",
+        "get",
+        "run-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/updates/runs/run-1",
+      "data": {}
+    },
+    {
+      "name": "users",
+      "args": [
+        "users",
+        "agent-1"
+      ],
+      "method": "GET",
+      "path": "/api/v2/assets/agent-1/users",
+      "data": {
+        "sessions": []
+      }
+    },
+    {
+      "name": "whoami",
+      "args": [
+        "whoami"
+      ],
+      "method": "GET",
+      "path": "/api/v2/whoami",
+      "data": {}
+    }
+  ],
+  "local": [
+    "config set-host",
+    "config set-key",
+    "config set-ca",
+    "config show",
+    "help",
+    "completion bash",
+    "completion zsh",
+    "completion fish",
+    "completion powershell"
+  ],
+  "list_envelopes": [
+    {
+      "name": "docker hosts",
+      "args": [
+        "docker",
+        "hosts"
+      ],
+      "data": {
+        "hosts": []
+      }
+    },
+    {
+      "name": "docker hosts null",
+      "args": [
+        "docker",
+        "hosts"
+      ],
+      "data": {
+        "hosts": null
+      }
+    },
+    {
+      "name": "docker containers",
+      "args": [
+        "docker",
+        "ps",
+        "host-1"
+      ],
+      "data": {
+        "containers": []
+      }
+    },
+    {
+      "name": "docker containers null",
+      "args": [
+        "docker",
+        "ps",
+        "host-1"
+      ],
+      "data": {
+        "containers": null
+      }
+    },
+    {
+      "name": "file listing",
+      "args": [
+        "files",
+        "ls",
+        "agent-1",
+        "/tmp"
+      ],
+      "data": {
+        "entries": []
+      }
+    },
+    {
+      "name": "file listing null",
+      "args": [
+        "files",
+        "ls",
+        "agent-1",
+        "/tmp"
+      ],
+      "data": {
+        "entries": null
+      }
+    },
+    {
+      "name": "process listing",
+      "args": [
+        "ps",
+        "list",
+        "agent-1"
+      ],
+      "data": {
+        "processes": []
+      }
+    },
+    {
+      "name": "process listing null",
+      "args": [
+        "ps",
+        "list",
+        "agent-1"
+      ],
+      "data": {
+        "processes": null,
+        "request_id": "agent-request"
+      }
+    },
+    {
+      "name": "agents pending",
+      "args": [
+        "agents",
+        "pending"
+      ],
+      "data": {
+        "count": 0,
+        "agents": []
+      }
+    },
+    {
+      "name": "services null",
+      "args": [
+        "services",
+        "list",
+        "agent-1"
+      ],
+      "data": {
+        "services": null,
+        "request_id": "agent-request"
+      }
+    },
+    {
+      "name": "alerts",
+      "args": [
+        "alerts",
+        "list"
+      ],
+      "data": {
+        "instances": []
+      }
+    },
+    {
+      "name": "collectors",
+      "args": [
+        "collectors",
+        "list"
+      ],
+      "data": {
+        "collectors": []
+      }
+    },
+    {
+      "name": "connectors",
+      "args": [
+        "connectors",
+        "list"
+      ],
+      "data": {
+        "connectors": []
+      }
+    },
+    {
+      "name": "groups",
+      "args": [
+        "groups",
+        "list"
+      ],
+      "data": {
+        "groups": []
+      }
+    },
+    {
+      "name": "issues",
+      "args": [
+        "issues",
+        "list"
+      ],
+      "data": {
+        "incidents": []
+      }
+    },
+    {
+      "name": "update plans",
+      "args": [
+        "updates",
+        "plans",
+        "list"
+      ],
+      "data": {
+        "plans": []
+      }
+    },
+    {
+      "name": "update runs",
+      "args": [
+        "updates",
+        "runs",
+        "list"
+      ],
+      "data": {
+        "runs": []
+      }
+    },
+    {
+      "name": "notification channels",
+      "args": [
+        "notifications",
+        "channels"
+      ],
+      "data": {
+        "channels": [],
+        "capabilities": {}
+      }
+    },
+    {
+      "name": "notification history",
+      "args": [
+        "notifications",
+        "history"
+      ],
+      "data": {
+        "history": []
+      }
+    },
+    {
+      "name": "discovery proposals",
+      "args": [
+        "discovery",
+        "proposals"
+      ],
+      "data": {
+        "proposals": []
+      }
+    },
+    {
+      "name": "ha entities",
+      "args": [
+        "ha",
+        "entities"
+      ],
+      "data": {
+        "entities": [],
+        "count": 0
+      }
+    },
+    {
+      "name": "audit events",
+      "args": [
+        "audit"
+      ],
+      "data": {
+        "events": []
+      }
+    },
+    {
+      "name": "hub agents",
+      "args": [
+        "hub",
+        "agents"
+      ],
+      "data": {
+        "count": 0,
+        "presence": []
+      }
+    },
+    {
+      "name": "proxmox resources null",
+      "args": [
+        "proxmox",
+        "resources"
+      ],
+      "data": {
+        "resources": null
+      }
+    },
+    {
+      "name": "packages",
+      "args": [
+        "packages",
+        "list",
+        "agent-1"
+      ],
+      "data": {
+        "packages": [],
+        "request_id": "agent-request"
+      }
+    },
+    {
+      "name": "user sessions null",
+      "args": [
+        "users",
+        "agent-1"
+      ],
+      "data": {
+        "sessions": null,
+        "request_id": "agent-request"
+      }
+    },
+    {
+      "name": "disk mounts null",
+      "args": [
+        "disks",
+        "agent-1"
+      ],
+      "data": {
+        "mounts": null,
+        "request_id": "agent-request"
+      }
+    },
+    {
+      "name": "network interfaces null",
+      "args": [
+        "net",
+        "agent-1"
+      ],
+      "data": {
+        "interfaces": null,
+        "request_id": "agent-request"
+      }
+    },
+    {
+      "name": "cron entries null",
+      "args": [
+        "cron",
+        "agent-1"
+      ],
+      "data": {
+        "entries": null,
+        "request_id": "agent-request"
+      }
+    },
+    {
+      "name": "pbs snapshots",
+      "args": [
+        "pbs",
+        "snapshots",
+        "pbs-1"
+      ],
+      "data": {
+        "store": "main",
+        "snapshots": []
+      }
+    },
+    {
+      "name": "portainer stacks",
+      "args": [
+        "portainer",
+        "stacks",
+        "env-1"
+      ],
+      "data": {
+        "data": []
+      }
+    },
+    {
+      "name": "portainer containers null",
+      "args": [
+        "portainer",
+        "containers",
+        "env-1"
+      ],
+      "data": {
+        "data": null
+      }
+    }
+  ],
+  "renamed": [
+    {
+      "old": "assets list",
+      "current": "devices list"
+    },
+    {
+      "old": "assets get nas01",
+      "current": "devices get nas01"
+    },
+    {
+      "old": "incidents list",
+      "current": "issues list"
+    },
+    {
+      "old": "incidents ack i1",
+      "current": "issues investigate i1"
+    },
+    {
+      "old": "incidents resolve i1",
+      "current": "issues resolve i1"
+    },
+    {
+      "old": "topology edges pve01",
+      "current": "map connections pve01"
+    },
+    {
+      "old": "topology blast-radius pve01",
+      "current": "map downstream pve01"
+    },
+    {
+      "old": "topology upstream pve01",
+      "current": "map upstream pve01"
+    },
+    {
+      "old": "topology dependencies pve01",
+      "current": "map dependencies pve01"
+    },
+    {
+      "old": "metrics asset nas01",
+      "current": "metrics device nas01"
+    }
+  ]
+}

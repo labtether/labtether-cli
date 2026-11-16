@@ -53,3 +53,6 @@ __pycache__/
 
 # Local task scratch space
 work/
+
+# Rust build output
+rust/target/
