@@ -96,6 +96,19 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
       - run: go build ./...
+      # The CLI's largest package (cmd) lists about 3,100 characters of file
+      # paths at this checkout path, far under the 16,383 at which gosec
+      # v2.30.0 splits a package and cannot type-check it, so the tagged release
+      # is pinned rather than the commit the Hub uses.
+      - name: Go security scan
+        env:
+          GOTOOLCHAIN: local
+          GOBIN: ${{ runner.temp }}/gosec-bin
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.30.0
+          export PATH="${GOBIN}:${PATH}"
+          bash ./scripts/ci/test-gosec-gate.sh
+          bash ./scripts/check-gosec.sh
 
   installed-cli-package:
     needs: qa-contracts
