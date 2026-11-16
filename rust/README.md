@@ -2,7 +2,8 @@
 
 A Rust port of the Go CLI in this repository, built in small steps. The Go
 CLI keeps shipping until the Rust one does the same job against a real hub.
-Nothing here is released yet.
+Nothing here is released yet; [RELEASING.md](RELEASING.md) says how the
+release binaries are built and checked.
 
 ## What it does so far
 
