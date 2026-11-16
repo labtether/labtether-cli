@@ -19,3 +19,7 @@ tls-permission-behavior	cmd/tls.go	TLS command changes require focused credentia
 tls-permission-behavior	internal/client/**	Client networking and TLS changes require focused credential and TLS tests
 tls-permission-behavior	scripts/ci/**	QA contract changes must prove every slow CLI contract
 tls-permission-behavior	.github/workflows/ci.yml	CI routing changes must prove every slow CLI contract
+rust-cli	rust/**	Rust CLI changes require its format, lint and test checks
+rust-cli	testdata/hub-routes.json	The route table shared with the Rust CLI tests must still pass there
+rust-cli	scripts/ci/**	QA contract changes must prove every slow CLI contract
+rust-cli	.github/workflows/ci.yml	CI routing changes must prove every slow CLI contract

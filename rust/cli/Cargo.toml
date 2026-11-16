@@ -1,0 +1,27 @@
+[package]
+name = "labtether-cli-rs"
+description = "The LabTether command-line tool in Rust; read commands only for now"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "labtether-cli-rs"
+path = "src/main.rs"
+
+[dependencies]
+labtether-cli-client.workspace = true
+labtether-cli-platform.workspace = true
+
+jiff.workspace = true
+rpassword.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+rcgen.workspace = true
+
+[lints]
+workspace = true

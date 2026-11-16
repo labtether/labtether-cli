@@ -1,0 +1,57 @@
+[workspace]
+resolver = "3"
+members = ["cli", "crates/client", "crates/platform"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+repository = "https://github.com/labtether/labtether-cli"
+publish = false
+
+[workspace.dependencies]
+labtether-cli-client = { path = "crates/client" }
+labtether-cli-platform = { path = "crates/platform" }
+
+# Blocking HTTP client, rustls with the ring provider (ureq's default; no
+# aws-lc build). No gzip: the Go CLI's gzip is transparent and not needed.
+ureq = { version = "3.5.2", default-features = false, features = ["rustls", "socks-proxy"] }
+# Hub URL parsing and redirect resolution.
+url = "2.5.8"
+# JSON. arbitrary_precision keeps each number's text, which table cells
+# print as the Go CLI's json.Number does.
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["arbitrary_precision"] }
+# Matching ureq's TLS errors, and checking CA file certificates.
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-native-certs = "0.8.5"
+rustls-pki-types = { version = "1.16.0", features = ["std"] }
+# Local time for table cells, with the system time zone database.
+jiff = "0.2.45"
+# Reads the API key from a terminal without echo (config set-key).
+rpassword = "7.5.5"
+# Windows only: the config file ACL (crates/platform).
+windows-sys = "0.61.2"
+
+# Test-only: certificates for the stand-in Hub.
+rcgen = { version = "0.14.10", default-features = false, features = ["crypto", "pem", "ring"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+# The lab VM and CI build with these settings. Debug info and incremental
+# files make the target folder several times larger and are not used here.
+[profile.dev]
+debug = false
+incremental = false
+
+[profile.test]
+debug = false
+incremental = false
+
+[profile.release]
+debug = false
+incremental = false
+strip = true
+lto = "thin"
+codegen-units = 4
