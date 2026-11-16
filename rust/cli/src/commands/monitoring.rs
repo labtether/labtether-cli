@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use serde_json::Value;
 
 use super::common::{decode_list, rows};
-use super::{Ctx, leaf, not_yet};
+use super::{Ctx, actions, leaf};
 use crate::cobra::Command;
 use crate::errors::CliError;
 use crate::output::cells::{status_word, text, time_text};
@@ -21,8 +21,8 @@ pub fn commands() -> Vec<Command> {
     vec![
         Command::new("alerts", "List and resolve alerts").children(vec![
             leaf("list", "List active alerts", alerts_list),
-            not_yet("ack <alert>", "Acknowledge an alert").exact(1),
-            not_yet("resolve <alert>", "Resolve an alert").exact(1),
+            leaf("ack <alert>", "Acknowledge an alert", actions::alerts_ack).exact(1),
+            leaf("resolve <alert>", "Resolve an alert", actions::alerts_resolve).exact(1),
         ]),
         Command::new("issues", "List and resolve issues")
             .aliases(&["incidents"])
@@ -30,8 +30,8 @@ pub fn commands() -> Vec<Command> {
             .children(vec![
                 leaf("list", "List issues", issues_list),
                 get_leaf("get <id>", "Show one issue", |ctx| by_id(ctx, "/api/v2/incidents/")),
-                not_yet("investigate <id>", "Move an issue to Investigating").aliases(&["ack"]).exact(1),
-                not_yet("resolve <id>", "Resolve an issue").exact(1),
+                leaf("investigate <id>", "Move an issue to Investigating", actions::issues_investigate).aliases(&["ack"]).exact(1),
+                leaf("resolve <id>", "Resolve an issue", actions::issues_resolve).exact(1),
             ]),
         leaf("audit", "Show the audit log", audit),
         Command::new("checks", "Show service checks").children(vec![
@@ -45,18 +45,18 @@ pub fn commands() -> Vec<Command> {
         Command::new("failover", "Show failover pairs").children(vec![
             leaf("list", "List failover pairs", failover_list),
             get_leaf("get <id>", "Show one failover pair", |ctx| by_id(ctx, "/api/v2/failover-pairs/")),
-            not_yet("check-readiness <id>", "Check whether a failover pair is ready").exact(1),
+            leaf("check-readiness <id>", "Check whether a failover pair is ready", actions::failover_readiness).exact(1),
         ]),
         Command::new("discovery", "Run discovery and review suggested relationships").children(vec![
-            not_yet("run", "Start a discovery scan"),
+            leaf("run", "Start a discovery scan", actions::discovery_run),
             leaf("proposals", "List suggested relationships", discovery_proposals),
-            not_yet("accept <id>", "Accept a suggested relationship").exact(1),
-            not_yet("dismiss <id>", "Dismiss a suggested relationship").aliases(&["reject"]).exact(1),
+            leaf("accept <id>", "Accept a suggested relationship", actions::discovery_accept).exact(1),
+            leaf("dismiss <id>", "Dismiss a suggested relationship", actions::discovery_dismiss).aliases(&["reject"]).exact(1),
         ]),
         Command::new("updates", "Run update plans and list their runs").children(vec![
             Command::new("plans", "List and run update plans").children(vec![
                 leaf("list", "List update plans", update_plans),
-                not_yet("execute <plan>", "Run an update plan").exact(1),
+                leaf("execute <plan>", "Run an update plan", actions::update_plan_execute).exact(1),
             ]),
             Command::new("runs", "Show past update runs").children(vec![
                 leaf("list", "List update runs", update_runs),

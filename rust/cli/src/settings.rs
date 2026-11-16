@@ -7,7 +7,9 @@ use std::path::Path;
 
 use labtether_cli_client::error::path_error;
 use labtether_cli_client::{Client, ProxyEnv, Secret, validate_base_url};
-use labtether_cli_platform::{harden_config_file, permissions_too_broad, replace_config_file};
+use labtether_cli_platform::{
+    create_private_file, harden_config_file, permissions_too_broad, replace_config_file,
+};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -25,7 +27,11 @@ pub struct Env {
     pub api_key: Option<Secret>,
     pub ca_file: Option<String>,
     pub home: Option<String>,
-    pub tmpdir: Option<String>,
+    /// `LABTETHER_CLI_COMPLETION_DESCRIPTIONS`, else
+    /// `COBRA_COMPLETION_DESCRIPTIONS` (Cobra reads both).
+    pub completion_descriptions: Option<String>,
+    /// `BASH_COMP_DEBUG_FILE`: where Cobra's completion appends its notes.
+    pub comp_debug_file: Option<String>,
     /// HTTPS_PROXY, HTTP_PROXY and NO_PROXY, as Go's transport reads them.
     pub proxy: ProxyEnv,
 }
@@ -42,27 +48,34 @@ impl Env {
             } else {
                 var("HOME")
             },
-            tmpdir: if cfg!(windows) {
-                var("TEMP")
-            } else {
-                var("TMPDIR")
-            },
+            completion_descriptions: var("LABTETHER_CLI_COMPLETION_DESCRIPTIONS")
+                .or_else(|| var("COBRA_COMPLETION_DESCRIPTIONS")),
+            comp_debug_file: var("BASH_COMP_DEBUG_FILE"),
             proxy: ProxyEnv::from_process(),
         }
     }
 
-    /// Go's `configDir`: `$HOME/.config/labtether`, or the temporary folder
-    /// when there is no home folder.
-    pub fn config_dir(&self) -> String {
-        match &self.home {
-            Some(home) => join(&[home, ".config", "labtether"]),
-            None => join(&[self.tmpdir.as_deref().unwrap_or("/tmp"), "labtether"]),
-        }
+    /// `$HOME/.config/labtether`, or none without a home folder. There is
+    /// no fallback: a shared folder such as the system temporary folder
+    /// could hold a config file (and a Hub address) another user put there.
+    /// The Go CLI used `<temp folder>/labtether`.
+    pub fn config_dir(&self) -> Option<String> {
+        self.home
+            .as_ref()
+            .map(|home| join(&[home, ".config", "labtether"]))
     }
 
-    pub fn config_path(&self) -> String {
-        join(&[&self.config_dir(), "config.json"])
+    pub fn config_path(&self) -> Option<String> {
+        self.config_dir().map(|dir| join(&[&dir, "config.json"]))
     }
+}
+
+/// Why settings cannot be read or saved without a home folder.
+pub fn no_home_folder() -> String {
+    let name = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+    format!(
+        "no home folder to keep settings in; set {name}, or set LABTETHER_HOST and LABTETHER_API_KEY"
+    )
 }
 
 /// The saved settings.
@@ -117,7 +130,9 @@ fn decode_config(data: &[u8]) -> (Config, Option<String>) {
 /// Go's `loadConfig`: a missing file is an empty config; a symlink or
 /// device is refused; the file is set to mode 0600 before it is read.
 pub fn load_config(env: &Env) -> (Config, Option<String>) {
-    let path = env.config_path();
+    let Some(path) = env.config_path() else {
+        return (Config::default(), None);
+    };
     let meta = match std::fs::symlink_metadata(&path) {
         Ok(meta) => meta,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => return (Config::default(), None),
@@ -201,7 +216,9 @@ fn config_json(config: &Config) -> String {
 
 /// Go's `saveConfig`: a protected temporary file renamed over the config.
 pub fn save_config(env: &Env, config: &Config) -> Result<(), String> {
-    let dir = env.config_dir();
+    let (Some(dir), Some(path)) = (env.config_dir(), env.config_path()) else {
+        return Err(no_home_folder());
+    };
     create_private_dir(&dir).map_err(|e| path_error("mkdir", &dir, &e))?;
     let nonce = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -209,22 +226,14 @@ pub fn save_config(env: &Env, config: &Config) -> Result<(), String> {
         .subsec_nanos();
     let tmp = join(&[&dir, &format!(".config-{}{nonce}.tmp", std::process::id())]);
     let result = (|| {
-        let mut options = std::fs::OpenOptions::new();
-        options.write(true).create_new(true);
-        // Created as 0600, as Go's os.CreateTemp: a file made with the
-        // umask's 0644 could be opened by another user before the chmod
-        // below and read once the key is written.
-        #[cfg(unix)]
-        std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
-        let mut file = options
-            .open(&tmp)
-            .map_err(|e| path_error("open", &tmp, &e))?;
-        harden_config_file(Path::new(&tmp)).map_err(|e| path_error("chmod", &tmp, &e))?;
+        // Private from the moment it exists (mode 0600; on Windows the
+        // private ACL at creation and no sharing): the key is written next.
+        let mut file =
+            create_private_file(Path::new(&tmp)).map_err(|e| path_error("open", &tmp, &e))?;
         std::io::Write::write_all(&mut file, config_json(config).as_bytes())
             .map_err(|e| path_error("write", &tmp, &e))?;
         file.sync_all().map_err(|e| path_error("sync", &tmp, &e))?;
         drop(file);
-        let path = env.config_path();
         replace_config_file(Path::new(&tmp), Path::new(&path)).map_err(|e| {
             format!(
                 "rename {tmp} {path}: {}",

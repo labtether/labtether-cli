@@ -1,14 +1,17 @@
 //! The command tree: every command of the Go CLI with its usage, aliases,
-//! flags and argument rule, and for each either a Rust handler or a mark
-//! that it is not in the Rust build yet.
+//! flags, argument rule and handler.
 
+mod actions;
 pub mod common;
+pub mod complete;
 mod config;
+mod exec;
 mod groups;
 mod inventory;
 mod meta;
 mod monitoring;
 mod platforms;
+mod remote;
 mod targets;
 
 use labtether_cli_client::Client;
@@ -25,9 +28,6 @@ pub type Handler = fn(&mut Ctx) -> Result<(), CliError>;
 pub enum Run {
     /// A command the Rust build runs.
     Rust(Handler),
-    /// A command that changes something, runs remote commands, transfers
-    /// files or streams; the Rust build refuses it for now.
-    NotYet,
 }
 
 impl std::fmt::Debug for Ctx<'_> {
@@ -47,6 +47,9 @@ pub struct Ctx<'a> {
     pub args: Vec<String>,
     pub flags: Parsed,
     pub json: bool,
+    /// The command word as typed (an alias or the name), Cobra's
+    /// `CalledAs`.
+    pub called_as: String,
     pub env: &'a Env,
     pub out: &'a mut Out,
     pub stdin: &'a mut dyn crate::app::Input,
@@ -72,16 +75,21 @@ impl Ctx<'_> {
         }
         Ok(client)
     }
+
+    /// A client with a longer request deadline, as the Go CLI sets for
+    /// package and Proxmox actions. Tests keep their own deadline.
+    pub fn client_with(&self, timeout: std::time::Duration) -> Result<Client, CliError> {
+        let mut client = self.client()?;
+        if self.timeout.is_none() {
+            client.timeout = timeout;
+        }
+        Ok(client)
+    }
 }
 
 /// A runnable leaf with a Rust handler.
 pub fn leaf(usage: &'static str, short: &str, handler: Handler) -> Command {
     Command::new(usage, short).run(Run::Rust(handler))
-}
-
-/// A runnable leaf the Rust build refuses for now.
-pub fn not_yet(usage: &'static str, short: &str) -> Command {
-    Command::new(usage, short).run(Run::NotYet)
 }
 
 /// The build version, `dev` unless the build sets `LABTETHER_CLI_VERSION`,

@@ -14,7 +14,10 @@ fn main() {
         .map(|a| a.to_string_lossy().into_owned())
         .collect();
     let env = Env::from_process();
-    let mut out = Out::default();
+    let mut out = Out {
+        sink: Some(Box::new(std::io::stdout())),
+        ..Out::default()
+    };
     let code = execute(&args, &env, &mut Stdin, &mut out, None);
     let _ = std::io::stdout().write_all(&out.stdout);
     let _ = std::io::stdout().flush();

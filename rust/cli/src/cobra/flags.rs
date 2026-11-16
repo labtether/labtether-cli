@@ -71,6 +71,15 @@ pub struct Parsed {
 }
 
 impl Parsed {
+    /// Arguments taken as they are, with no flag parsed (Cobra's
+    /// `DisableFlagParsing`).
+    pub fn unparsed(args: &[String]) -> Parsed {
+        Parsed {
+            args: args.to_vec(),
+            ..Parsed::default()
+        }
+    }
+
     pub fn string(&self, name: &str) -> String {
         self.values.get(name).cloned().unwrap_or_default()
     }
@@ -189,9 +198,18 @@ pub fn parse(set: &FlagSet, input: &[String]) -> Result<Parsed, String> {
             continue;
         }
         let mut rest = &arg[1..];
-        while let Some(c) = rest.chars().next() {
+        // pflag reads shorthands byte by byte; a non-ASCII byte is never a
+        // flag and is named as that byte's Latin-1 character, as Go does.
+        while let Some(&byte) = rest.as_bytes().first() {
+            let c = byte as char;
             let current = rest;
-            let after = &rest[c.len_utf8()..];
+            if !byte.is_ascii() {
+                return Err(format!(
+                    "unknown shorthand flag: {} in -{rest}",
+                    quote_rune(c)
+                ));
+            }
+            let after = &rest[1..];
             let Some(flag) = set.lookup_short(c) else {
                 return Err(format!(
                     "unknown shorthand flag: {} in -{rest}",

@@ -22,6 +22,26 @@ pub fn harden_config_file(path: &Path) -> io::Result<()> {
     }
 }
 
+/// Creates a new file only the current user can read, private from the
+/// moment it exists: mode 0600 on Unix; on Windows the protected ACL is set
+/// at creation and the file is not shared, so no other handle can be open
+/// on it while the key is written. Fails if the file exists.
+pub fn create_private_file(path: &Path) -> io::Result<std::fs::File> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(path)
+    }
+    #[cfg(windows)]
+    {
+        windows::create_private(path)
+    }
+}
+
 /// Moves the finished temporary file over the config file (Go's
 /// `replaceConfigFile`; on Windows `MoveFileEx` with replace).
 pub fn replace_config_file(from: &Path, to: &Path) -> io::Result<()> {

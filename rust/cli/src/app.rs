@@ -81,31 +81,27 @@ pub fn execute(
     out: &mut Out,
     timeout: Option<Duration>,
 ) -> i32 {
-    let root = commands::root();
+    let mut root = commands::root();
     let json = requests_json(&root, args);
+    // Cobra adds the hidden `__complete` command only when it is called.
+    let mut called_as = String::new();
+    if let Some((with_request, name)) = commands::complete::requested(&root, args) {
+        root = with_request;
+        called_as = name;
+    }
     let (path, rest, find_error) = find::find(&root, args);
-    let first_word = find::strip_flags(args, &flag_set(&root, &CmdPath::default(), false))
-        .into_iter()
-        .next();
-    let (result, help_ready) = if matches!(
-        first_word.as_deref(),
-        Some("__complete" | "__completeNoDesc")
-    ) {
-        (
-            Err(CliError::NotInRustBuild(
-                "labtether-cli __complete (shell completion answers)".into(),
-            )),
-            false,
-        )
-    } else if let Some(err) = find_error {
+    let (result, help_ready) = if let Some(err) = find_error {
         (Err(CliError::Usage(err)), false)
     } else {
-        (run(&root, &path, &rest, env, stdin, out, timeout), true)
+        let run_ctx = RunCtx {
+            called_as,
+            env,
+            timeout,
+        };
+        (run(&root, &path, &rest, run_ctx, stdin, out), true)
     };
     let Err(err) = result else { return 0 };
-    if let CliError::NotInRustBuild(_) = err {
-        out.eprint(&format!("Error: {err}\n"));
-    } else if json && !is_raw_output(&root, &path) {
+    if json && !is_raw_output(&root, &path) {
         if !out.json_written {
             out.print_json(&object(&[("error", string(&err.to_string()))]));
         }
@@ -119,20 +115,31 @@ pub fn execute(
     err.exit_code()
 }
 
-#[allow(clippy::too_many_arguments)]
+/// What a run needs besides the command and its arguments.
+struct RunCtx<'a> {
+    called_as: String,
+    env: &'a Env,
+    timeout: Option<Duration>,
+}
+
 fn run(
     root: &Command,
     path: &CmdPath,
     rest: &[String],
-    env: &Env,
+    run_ctx: RunCtx,
     stdin: &mut dyn Input,
     out: &mut Out,
-    timeout: Option<Duration>,
 ) -> Result<(), CliError> {
     let cmd = path.resolve(root);
     let is_exec = path.command_path(root) == "labtether-cli exec";
     let flags = flag_set(root, path, true);
-    let parsed = parse(&flags, rest).map_err(|err| {
+    let parsed = if cmd.disable_flag_parsing {
+        // Cobra's DisableFlagParsing: every argument goes to the command.
+        Ok(crate::cobra::flags::Parsed::unparsed(rest))
+    } else {
+        parse(&flags, rest)
+    };
+    let parsed = parsed.map_err(|err| {
         if is_exec && err.starts_with("unknown ") {
             CliError::Usage(format!("{err}. {EXEC_HINT}"))
         } else {
@@ -166,6 +173,12 @@ fn run(
                 parsed.args.len()
             )));
         }
+        Args::Minimum(n) if parsed.args.len() < n => {
+            return Err(CliError::Usage(format!(
+                "requires at least {n} arg(s), only received {}",
+                parsed.args.len()
+            )));
+        }
         Args::None if !parsed.args.is_empty() => {
             return Err(CliError::Usage(format!(
                 "unknown command {} for {}",
@@ -175,22 +188,19 @@ fn run(
         }
         _ => {}
     }
-    match run {
-        Run::NotYet => Err(CliError::NotInRustBuild(path.command_path(root))),
-        Run::Rust(handler) => {
-            let json = parsed.bool("json");
-            let mut ctx = Ctx {
-                root,
-                path: path.clone(),
-                args: parsed.args.clone(),
-                flags: parsed,
-                json,
-                env,
-                out,
-                stdin,
-                timeout,
-            };
-            handler(&mut ctx)
-        }
-    }
+    let Run::Rust(handler) = run;
+    let json = parsed.bool("json");
+    let mut ctx = Ctx {
+        root,
+        path: path.clone(),
+        args: parsed.args.clone(),
+        flags: parsed,
+        json,
+        called_as: run_ctx.called_as,
+        env: run_ctx.env,
+        out,
+        stdin,
+        timeout: run_ctx.timeout,
+    };
+    handler(&mut ctx)
 }

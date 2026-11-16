@@ -4,10 +4,14 @@
 //! text); the exit code is 1 in both.
 
 use serde::de::DeserializeOwned;
-use serde_json::Value;
+use serde_json::{Map, Value};
+
+use labtether_cli_client::Method;
 
 use super::Ctx;
 use crate::errors::CliError;
+use crate::output::gojson::{Numbers, encode};
+use crate::output::object;
 use crate::output::table::{Column, render};
 
 /// A plain name for a JSON value's kind.
@@ -91,6 +95,33 @@ pub fn check_any_map(data: &Value) -> Result<(), String> {
 }
 
 impl Ctx<'_> {
+    /// A JSON request body as Go's `json.Marshal` writes a map: compact,
+    /// keys sorted, Go's string escapes.
+    pub fn body(pairs: &[(&str, Value)]) -> Vec<u8> {
+        encode(&object(pairs), Numbers::Text, false).into_bytes()
+    }
+
+    /// `method path` with an optional JSON body; the decoded payload.
+    pub fn send(
+        &mut self,
+        method: Method,
+        path: &str,
+        body: Option<Vec<u8>>,
+    ) -> Result<Value, CliError> {
+        let client = self.client()?;
+        Ok(client.send(method, path, body.as_deref())?)
+    }
+
+    /// The Go CLI's `printMutationResult`: the Hub's payload with --json,
+    /// else one line.
+    pub fn print_status(&mut self, data: &Value, said: &str) -> Result<(), CliError> {
+        if self.json {
+            return self.print_data(data);
+        }
+        self.out.print(said);
+        Ok(())
+    }
+
     /// `GET path` through a client built from the settings.
     pub fn get(&mut self, path: &str) -> Result<Value, CliError> {
         let client = self.client()?;
@@ -135,4 +166,57 @@ impl Ctx<'_> {
     pub fn query_arg(&self, index: usize) -> String {
         labtether_cli_client::escape::query_escape(&self.args[index])
     }
+}
+
+/// A JSON object as Go decodes it into a struct: null (or a missing
+/// member) is an empty one; anything else that is not an object fails.
+pub fn as_object(value: Option<&Value>) -> Result<Option<&Map<String, Value>>, String> {
+    match value {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Object(map)) => Ok(Some(map)),
+        Some(other) => Err(format!("the hub sent {}, not an object", kind(other))),
+    }
+}
+
+/// A string member as Go decodes it into a `string` field: missing or
+/// null is "", anything but text fails.
+pub fn str_member(map: Option<&Map<String, Value>>, key: &str) -> Result<String, String> {
+    match map.and_then(|m| m.get(key)) {
+        None | Some(Value::Null) => Ok(String::new()),
+        Some(Value::String(text)) => Ok(text.clone()),
+        Some(other) => Err(format!("{key} is {}, not text", kind(other))),
+    }
+}
+
+/// A member of an object as Go decodes it into a nested struct.
+pub fn object_member<'a>(
+    map: Option<&'a Map<String, Value>>,
+    key: &str,
+) -> Result<Option<&'a Map<String, Value>>, String> {
+    as_object(map.and_then(|m| m.get(key))).map_err(|e| format!("{key}: {e}"))
+}
+
+/// Go's `strings.EqualFold` for the words the CLI compares: equal when
+/// each pair of characters is the same in lower or in upper case (this
+/// covers Go's simple folds such as K and the Kelvin sign).
+pub fn equal_fold(a: &str, b: &str) -> bool {
+    a.chars().count() == b.chars().count()
+        && a.chars().zip(b.chars()).all(|(x, y)| {
+            x == y || x.to_lowercase().eq(y.to_lowercase()) || x.to_uppercase().eq(y.to_uppercase())
+        })
+}
+
+/// Go's `strings.ToLower`: one lower-case rune per rune (Go maps U+0130
+/// to a plain "i").
+pub fn go_lower(text: &str) -> String {
+    text.chars()
+        .map(|c| {
+            let mut lower = c.to_lowercase();
+            match (lower.next(), lower.next()) {
+                (Some(single), None) => single,
+                _ if c == '\u{130}' => 'i',
+                _ => c,
+            }
+        })
+        .collect()
 }

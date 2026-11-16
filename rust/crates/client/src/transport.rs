@@ -67,23 +67,7 @@ fn tls_text(err: &rustls::Error) -> String {
 pub fn plain(err: &ureq::Error) -> String {
     use ureq::Error;
     match err {
-        Error::Io(io) => {
-            if let Some(tls) = io
-                .get_ref()
-                .and_then(|inner| inner.downcast_ref::<rustls::Error>())
-            {
-                return tls_text(tls);
-            }
-            match io.kind() {
-                std::io::ErrorKind::ConnectionRefused => "connection refused".into(),
-                std::io::ErrorKind::ConnectionReset => "the connection was reset".into(),
-                std::io::ErrorKind::TimedOut => "timed out".into(),
-                std::io::ErrorKind::UnexpectedEof => {
-                    "the connection closed before the answer was complete".into()
-                }
-                _ => crate::error::errno_text(io),
-            }
-        }
+        Error::Io(io) => io_text(io),
         Error::HostNotFound => "host not found".into(),
         Error::ConnectionFailed => "connection failed".into(),
         Error::Timeout(_) => "timed out".into(),
@@ -94,5 +78,26 @@ pub fn plain(err: &ureq::Error) -> String {
         Error::Protocol(_) => "the answer is not valid HTTP".into(),
         Error::LargeResponseHeader(_, _) => "the answer's headers are too large".into(),
         other => format!("{other}"),
+    }
+}
+
+/// Plain words for an I/O failure, such as reading a file body.
+pub fn io_text(io: &std::io::Error) -> String {
+    if let Some(inner) = io.get_ref() {
+        if let Some(tls) = inner.downcast_ref::<rustls::Error>() {
+            return tls_text(tls);
+        }
+        if let Some(err) = inner.downcast_ref::<ureq::Error>() {
+            return plain(err);
+        }
+    }
+    match io.kind() {
+        std::io::ErrorKind::ConnectionRefused => "connection refused".into(),
+        std::io::ErrorKind::ConnectionReset => "the connection was reset".into(),
+        std::io::ErrorKind::TimedOut => "timed out".into(),
+        std::io::ErrorKind::UnexpectedEof => {
+            "the connection closed before the answer was complete".into()
+        }
+        _ => crate::error::errno_text(io),
     }
 }

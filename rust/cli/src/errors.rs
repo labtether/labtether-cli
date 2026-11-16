@@ -23,25 +23,23 @@ pub enum CliError {
     Hub { status: u16, message: String },
     /// An object the CLI looked up itself and did not find.
     NotFound(String),
-    /// A command this Rust build does not have yet.
-    NotInRustBuild(String),
     /// Anything else: transport, decode, size limit.
     Failed(String),
+    /// A remote command that did not succeed. The CLI exits with `code`
+    /// (the Go CLI's `remoteCommandError`).
+    Remote { message: String, code: i32 },
 }
 
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CliError::Hub { status, message } => write!(f, "{message} (status {status})"),
-            CliError::NotInRustBuild(path) => write!(
-                f,
-                "{path} is not in the Rust build yet; use the Go labtether-cli"
-            ),
             CliError::Usage(m)
             | CliError::UsageInRun(m)
             | CliError::Config(m)
             | CliError::NotFound(m)
-            | CliError::Failed(m) => f.write_str(m),
+            | CliError::Failed(m)
+            | CliError::Remote { message: m, .. } => f.write_str(m),
         }
     }
 }
@@ -49,6 +47,7 @@ impl fmt::Display for CliError {
 impl CliError {
     pub fn exit_code(&self) -> i32 {
         match self {
+            CliError::Remote { code, .. } => *code,
             CliError::Config(_) => EXIT_CONFIG,
             CliError::Hub {
                 status: 401 | 403, ..
@@ -111,7 +110,6 @@ mod tests {
             CliError::Failed("status 404: not json".into()).exit_code(),
             1
         );
-        assert_ne!(CliError::NotInRustBuild("exec".into()).exit_code(), 0);
     }
 
     // Fault: the code came from message text, so a Hub message that happens

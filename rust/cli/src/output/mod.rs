@@ -1,14 +1,15 @@
 //! Output: JSON printing with the Go CLI's redaction, tables and cells.
 
 pub mod cells;
-pub mod gofloat;
-pub mod gojson;
 pub mod table;
 pub mod time;
 
-use serde_json::{Map, Value};
+use labtether_cli_client::redact::decoded_numbers;
+pub use labtether_cli_client::redact::{is_sensitive_key, redact};
+pub use labtether_cli_client::{gofloat, gojson};
+use serde_json::Value;
 
-use gojson::{Numbers, encode};
+use gojson::encode;
 /// Standard output and error for one run, written when the run ends.
 #[derive(Default)]
 pub struct Out {
@@ -17,9 +18,25 @@ pub struct Out {
     /// Set once a JSON result is printed, so a later error does not add a
     /// second JSON document (the Go CLI's `jsonResponseWritten`).
     pub json_written: bool,
+    /// Where `files cat` streams a file as it arrives (the process's
+    /// standard output). Without one it is kept in `stdout`.
+    pub sink: Option<Box<dyn std::io::Write>>,
 }
 
 impl Out {
+    /// A writer for output that streams: what is buffered so far goes
+    /// first, so the order stays as printed.
+    pub fn raw_writer(&mut self) -> &mut dyn std::io::Write {
+        match &mut self.sink {
+            Some(sink) => {
+                let _ = sink.write_all(&self.stdout);
+                self.stdout.clear();
+                sink.as_mut()
+            }
+            None => &mut self.stdout,
+        }
+    }
+
     pub fn print(&mut self, text: &str) {
         self.stdout.extend_from_slice(text.as_bytes());
     }
@@ -37,53 +54,12 @@ impl Out {
 }
 
 /// What the Go CLI's `writeJSON` prints: the value after a round trip
-/// through Go's `any`, secrets redacted, indented, with a newline. Go
-/// prints a payload it cannot decode (a number beyond float64) raw and
-/// unredacted; this always redacts and keeps such a number's text.
+/// through Go's `any` (`redact.Decode`), secrets redacted, indented, with a
+/// newline. With a number beyond float64 every number keeps its text, as Go.
 pub fn json_text(value: &Value) -> String {
-    let mut text = encode(&redact(value), Numbers::Float, true);
+    let mut text = encode(&redact(value), decoded_numbers(value), true);
     text.push('\n');
     text
-}
-
-/// The Go CLI's `isSensitiveJSONKey`.
-pub fn is_sensitive_key(key: &str) -> bool {
-    let normalized = key.replace(['-', ' '], "_").to_lowercase();
-    ["password", "secret", "token", "api_key", "private_key"]
-        .iter()
-        .any(|w| normalized.contains(w))
-        || normalized == "apikey"
-}
-
-/// The Go CLI's `isSafeSecretStatus`: values that say whether a secret is
-/// set without showing it.
-fn is_safe_status(value: &Value) -> bool {
-    match value {
-        Value::String(text) => matches!(text.as_str(), "(set)" | "(not set)" | "[redacted]"),
-        Value::Bool(_) => true,
-        _ => false,
-    }
-}
-
-/// The Go CLI's `redactDecodedJSON`.
-pub fn redact(value: &Value) -> Value {
-    match value {
-        Value::Object(members) => Value::Object(
-            members
-                .iter()
-                .map(|(key, child)| {
-                    let replaced = if is_sensitive_key(key) && !is_safe_status(child) {
-                        Value::String("[redacted]".into())
-                    } else {
-                        redact(child)
-                    };
-                    (key.clone(), replaced)
-                })
-                .collect::<Map<String, Value>>(),
-        ),
-        Value::Array(items) => Value::Array(items.iter().map(redact).collect()),
-        other => other.clone(),
-    }
 }
 
 /// A JSON object from string pairs, for the CLI's own small results.
@@ -110,7 +86,7 @@ mod tests {
     #[test]
     fn secrets_are_redacted_at_every_depth() {
         let value: Value = serde_json::from_str(
-            r#"{"host":"nas01","api_key":"lt_secret","api_key_status":"(set)","nested":{"access_token":"t1","name":"visible","items":[{"Private-Key":"k"}],"token_configured":true},"client secret":"s","n":1e400}"#,
+            r#"{"host":"nas01","api_key":"lt_secret","api_key_status":"(set)","nested":{"access_token":"t1","name":"visible","items":[{"Private-Key":"k"}],"token_configured":true},"client secret":"s","n":1e400,"m":2.50}"#,
         )
         .unwrap();
         let text = json_text(&value);
@@ -120,8 +96,9 @@ mod tests {
         assert!(text.contains("\"api_key_status\": \"(set)\""));
         assert!(text.contains("\"token_configured\": true"));
         assert!(text.contains("visible"));
-        // Go prints this payload raw and unredacted (a number beyond
-        // float64); the Rust CLI still redacts it.
+        // A number beyond float64: still redacted, and every number keeps
+        // its text, as Go since #49 (Go printed this answer raw before).
+        assert!(text.contains("\"m\": 2.50"), "{text}");
         assert!(
             text.contains("\"n\": 1e+400") || text.contains("\"n\": 1e400"),
             "{text}"

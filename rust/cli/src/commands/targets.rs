@@ -4,7 +4,7 @@
 use serde_json::Value;
 
 use super::common::check_any_map;
-use super::{Ctx, leaf, not_yet};
+use super::{Ctx, actions, exec, leaf, remote};
 use crate::cobra::{Args, Command, Flag};
 use crate::errors::CliError;
 use crate::output::cells::{byte_size, short_id, text, time_text};
@@ -19,24 +19,24 @@ pub fn commands() -> Vec<Command> {
         leaf("users <device>", "Show who is logged in to a device", users).exact(1),
         Command::new("packages", "Install and update packages on a device").children(vec![
             leaf("list <device>", "List installed packages on a device", packages_list).exact(1),
-            not_yet("install <device> <package>", "Install a package on a device").exact(2),
-            not_yet("update <device>", "Update all packages on a device").exact(1),
+            leaf("install <device> <package>", "Install a package on a device", actions::packages_install).exact(2),
+            leaf("update <device>", "Update all packages on a device", actions::packages_update).exact(1),
         ]),
         Command::new("services", "List and control system services on a device").children(vec![
             leaf("list <device>", "List system services on a device", services_list).exact(1),
-            not_yet("start <device> <service>", "Start a service").exact(2),
-            not_yet("stop <device> <service>", "Stop a service").exact(2),
-            not_yet("restart <device> <service>", "Restart a service").exact(2),
+            leaf("start <device> <service>", "Start a service", actions::services_start).exact(2),
+            leaf("stop <device> <service>", "Stop a service", actions::services_stop).exact(2),
+            leaf("restart <device> <service>", "Restart a service", actions::services_restart).exact(2),
         ]),
         Command::new("ps", "List and signal processes on a device").children(vec![
             leaf("list <device>", "List running processes on a device", ps_list).exact(1),
-            not_yet("kill <device> <pid>", "Send a signal to a process on a device")
+            leaf("kill <device> <pid>", "Send a signal to a process on a device", actions::ps_kill)
                 .exact(2)
                 .flag(Flag::string("signal", "SIGTERM", "Signal to send, such as SIGTERM or SIGKILL")),
         ]),
         Command::new("files", "List and read files on a device").children(vec![
             leaf("ls <device> <path>", "List a directory on a device", files_ls).exact(2),
-            not_yet("cat <device> <path>", "Print a file from a device").exact(2),
+            leaf("cat <device> <path>", "Print a file from a device", exec::files_cat).exact(2),
         ]),
         Command::new("metrics", "Show device metrics").children(vec![
             leaf("overview", "Show metrics for all devices", |ctx| ctx.get_and_print("/api/v2/metrics/overview")),
@@ -52,9 +52,9 @@ pub fn commands() -> Vec<Command> {
             leaf("ps <host>", "List containers on a Docker host", docker_ps)
                 .exact(1)
                 .flag(Flag::bool("all", "No effect; the list always includes stopped containers")),
-            not_yet("start <container>", "Start a container").exact(1),
-            not_yet("stop <container>", "Stop a container").exact(1),
-            not_yet("restart <container>", "Restart a container").exact(1),
+            leaf("start <container>", "Start a container", remote::docker_start).exact(1),
+            leaf("stop <container>", "Stop a container", remote::docker_stop).exact(1),
+            leaf("restart <container>", "Restart a container", remote::docker_restart).exact(1),
             leaf("logs <container>", "Print a container's logs", docker_logs).exact(1).flag(Flag::bounded_int(
                 "tail",
                 100,
@@ -64,7 +64,7 @@ pub fn commands() -> Vec<Command> {
                 "Number of lines to show from the end of the logs",
             )),
         ]),
-        not_yet("exec <device> <command>", "Run a command on a device")
+        leaf("exec <device> <command>", "Run a command on a device", exec::exec)
             .long(
                 "Run a shell command on a device, or with --targets or --group on several devices. \
                  When the command has its own flags, quote it or put it after --.",
@@ -76,9 +76,9 @@ pub fn commands() -> Vec<Command> {
             .flag(Flag::string("targets", "", "Device IDs to run on, separated by commas"))
             .flag(Flag::string("group", "", "Group ID to run on, as shown by groups list"))
             .flag(Flag::bounded_int("timeout", 30, "seconds", 1, 300, "Command timeout in seconds (max 300)")),
-        not_yet("reboot <device>", "Reboot a device").exact(1),
-        not_yet("shutdown <device>", "Shut down a device").exact(1),
-        not_yet("wake <device>", "Wake a device with Wake-on-LAN").exact(1),
+        leaf("reboot <device>", "Reboot a device", actions::reboot).exact(1),
+        leaf("shutdown <device>", "Shut down a device", actions::shutdown).exact(1),
+        leaf("wake <device>", "Wake a device with Wake-on-LAN", actions::wake).exact(1),
     ]
 }
 

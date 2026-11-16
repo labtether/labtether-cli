@@ -79,3 +79,25 @@ fn hardened_file_is_private_and_widening_is_caught() {
     );
     let _ = std::fs::remove_file(&path);
 }
+
+// Fault: the config's temporary copy, which receives the API key, was
+// created with the folder's inherited access and protected only after. A
+// handle another program opened in that moment keeps the access it was
+// opened with and could read the key written next.
+#[test]
+fn new_config_file_is_private_from_creation() {
+    let path = std::env::temp_dir().join(format!("ltcli-acl-new-{}", std::process::id()));
+    let _ = std::fs::remove_file(&path);
+    let file = labtether_cli_platform::create_private_file(&path).unwrap();
+    assert!(
+        file_is_private(&path).unwrap(),
+        "the new file is not private before anything else happens"
+    );
+    #[cfg(windows)]
+    assert!(
+        std::fs::File::open(&path).is_err(),
+        "a second handle was opened while the file is being written"
+    );
+    drop(file);
+    let _ = std::fs::remove_file(&path);
+}

@@ -7,11 +7,16 @@
 mod envelope;
 pub mod error;
 pub mod escape;
+pub mod gofloat;
+pub mod gojson;
 pub mod proxy;
+pub mod redact;
+mod request;
 pub mod tls;
 mod transport;
 
-use std::time::{Duration, Instant};
+use std::io::{Read, Write};
+use std::time::Duration;
 
 use serde_json::Value;
 use url::Url;
@@ -19,11 +24,14 @@ use url::Url;
 pub use envelope::decode as decode_envelope;
 pub use error::ClientError;
 pub use proxy::ProxyEnv;
+pub use request::Method;
 
 /// The largest Hub answer the CLI reads.
 pub const MAX_RESPONSE_BYTES: u64 = 16 * 1024 * 1024;
 /// The whole request, redirects included, must finish within this time.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5 * 60);
+/// The largest file `files cat` prints.
+pub const MAX_DOWNLOAD_BYTES: u64 = 512 * 1024 * 1024;
 /// Redirects followed before the CLI stops.
 pub const MAX_REDIRECTS: usize = 10;
 
@@ -104,10 +112,10 @@ fn same_origin(a: &Url, b: &Url) -> bool {
 }
 
 pub struct Client {
-    base_url: String,
-    api_key: Secret,
-    roots: ureq::tls::RootCerts,
-    proxy: ProxyEnv,
+    pub(crate) base_url: String,
+    pub(crate) api_key: Secret,
+    pub(crate) roots: ureq::tls::RootCerts,
+    pub(crate) proxy: ProxyEnv,
     /// The deadline for one request, redirects included; tests shorten it.
     pub timeout: Duration,
 }
@@ -136,93 +144,94 @@ impl Client {
         envelope::decode(status, &body)
     }
 
+    /// `method path` with an optional JSON body (POST and PATCH), and the
+    /// decoded `data` payload.
+    pub fn send(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&[u8]>,
+    ) -> Result<Value, ClientError> {
+        let response = self.open(method, path, body)?;
+        let (status, body) = read_limited(response)?;
+        envelope::decode(status, &body)
+    }
+
     /// `GET path` with same-origin redirects followed: the final status and
     /// body (at most 16 MiB).
     pub fn fetch(&self, path: &str) -> Result<(u16, Vec<u8>), ClientError> {
-        validate_base_url(&self.base_url).map_err(ClientError::Failed)?;
-        let origin = Url::parse(&self.base_url)
-            .map_err(|_| ClientError::Failed("invalid hub URL".into()))?;
-        let mut current = Url::parse(&format!("{}{path}", self.base_url)).map_err(|_| {
-            ClientError::Failed(format!("create request: invalid URL {:?}", shown(&origin)))
-        })?;
-        let deadline = Instant::now() + self.timeout;
-        let mut previous: Option<Url> = None;
-        for hop in 0..=MAX_REDIRECTS + 1 {
-            let failed = |message: String| {
-                ClientError::Failed(format!(
-                    "request failed: Get \"{}\": {message}",
-                    shown(&current)
-                ))
-            };
-            let left = deadline.saturating_duration_since(Instant::now());
-            if left.is_zero() {
-                return Err(failed("timed out".into()));
-            }
-            let agent =
-                transport::agent(&self.roots, &self.proxy, &current, left).map_err(failed)?;
-            let mut request = agent
-                .get(current.as_str())
-                .header("Authorization", format!("Bearer {}", self.api_key.expose()));
-            if let Some(referer) = previous
-                .as_ref()
-                .filter(|last| !(last.scheme() == "https" && current.scheme() == "http"))
-            {
-                request = request.header("Referer", shown(referer));
-            }
-            let mut response = request.call().map_err(|e| failed(transport::plain(&e)))?;
-            let status = response.status().as_u16();
-            let location = response
-                .headers()
-                .get("location")
-                .and_then(|v| v.to_str().ok())
-                .map(str::to_string);
-            match location
-                .filter(|l| !l.is_empty() && matches!(status, 301 | 302 | 303 | 307 | 308))
-            {
-                None => {
-                    let body = response
-                        .body_mut()
-                        .with_config()
-                        .limit(MAX_RESPONSE_BYTES)
-                        .read_to_vec();
-                    return match body {
-                        Ok(body) => Ok((status, body)),
-                        Err(ureq::Error::BodyExceedsLimit(_)) => Err(ClientError::Failed(format!(
-                            "response exceeds {MAX_RESPONSE_BYTES} byte limit"
-                        ))),
-                        Err(e) => Err(ClientError::Failed(format!(
-                            "read response: {}",
-                            transport::plain(&e)
-                        ))),
-                    };
-                }
-                Some(location) => {
-                    let refused = |message: String| {
-                        ClientError::Failed(format!(
-                            "request failed: Get \"{location}\": {message}"
-                        ))
-                    };
-                    let next = current.join(&location).map_err(|_| {
-                        failed(format!(
-                            "the hub sent an unreadable redirect location {location:?}"
-                        ))
-                    })?;
-                    // Go's client checks before following: with 10 requests
-                    // sent it refuses the 10th redirect.
-                    if hop + 1 >= MAX_REDIRECTS {
-                        return Err(refused(format!("stopped after {MAX_REDIRECTS} redirects")));
-                    }
-                    if !same_origin(&origin, &next) {
-                        return Err(refused(format!(
-                            "refusing cross-origin redirect to {}",
-                            shown(&next)
-                        )));
-                    }
-                    previous = Some(std::mem::replace(&mut current, next));
-                }
-            }
+        read_limited(self.open(Method::Get, path, None)?)
+    }
+
+    /// The Go CLI's `Download`: a file body that is not a JSON envelope,
+    /// written to `out` as it arrives, at most 512 MiB. An error status
+    /// gives the Hub's message, or "request failed (status N)".
+    pub fn download(&self, path: &str, out: &mut dyn Write) -> Result<(), ClientError> {
+        let mut response = self.open(Method::Get, path, None)?;
+        let status = response.status().as_u16();
+        if !(200..300).contains(&status) {
+            let (_, body) = read_limited(response)?;
+            return Err(envelope::download_error(status, &body));
         }
-        unreachable!("the loop returns within MAX_REDIRECTS + 1 hops")
+        let declared = response
+            .headers()
+            .get("content-length")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.trim().parse::<u64>().ok());
+        if declared.is_some_and(|length| length > MAX_DOWNLOAD_BYTES) {
+            return Err(too_large(MAX_DOWNLOAD_BYTES));
+        }
+        let mut reader = response.body_mut().with_config().limit(u64::MAX).reader();
+        let read_failed = |e: std::io::Error| {
+            ClientError::Failed(format!("read response: {}", transport::io_text(&e)))
+        };
+        let mut written: u64 = 0;
+        let mut buffer = vec![0u8; 64 * 1024];
+        while written < MAX_DOWNLOAD_BYTES {
+            let room = (MAX_DOWNLOAD_BYTES - written).min(buffer.len() as u64) as usize;
+            let n = match reader.read(&mut buffer[..room]) {
+                Ok(0) => return Ok(()),
+                Ok(n) => n,
+                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+                Err(e) => return Err(read_failed(e)),
+            };
+            out.write_all(&buffer[..n]).map_err(|e| {
+                ClientError::Failed(format!("write output: {}", error::errno_text(&e)))
+            })?;
+            written += n as u64;
+        }
+        // Exactly the limit was written: one more byte means the file is
+        // larger, as the Go CLI checks.
+        let mut extra = [0u8; 1];
+        match reader.read(&mut extra) {
+            Ok(0) => Ok(()),
+            Ok(_) => Err(too_large(MAX_DOWNLOAD_BYTES)),
+            Err(e) => Err(read_failed(e)),
+        }
+    }
+}
+
+fn too_large(limit: u64) -> ClientError {
+    ClientError::Failed(format!("response exceeds {limit} byte limit"))
+}
+
+/// Reads an answer's body, at most 16 MiB.
+fn read_limited(
+    mut response: ureq::http::Response<ureq::Body>,
+) -> Result<(u16, Vec<u8>), ClientError> {
+    let status = response.status().as_u16();
+    match response
+        .body_mut()
+        .with_config()
+        .limit(MAX_RESPONSE_BYTES)
+        .read_to_vec()
+    {
+        Ok(body) => Ok((status, body)),
+        Err(ureq::Error::BodyExceedsLimit(_)) => Err(too_large(MAX_RESPONSE_BYTES)),
+        Err(e) => Err(ClientError::Failed(format!(
+            "read response: {}",
+            transport::plain(&e)
+        ))),
     }
 }
 

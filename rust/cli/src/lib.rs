@@ -1,6 +1,5 @@
 //! The LabTether command-line tool in Rust. It copies the Go CLI's
-//! commands, flags, settings, output and exit codes; commands that change
-//! something are refused for now.
+//! commands, flags, settings, requests, output and exit codes.
 #![forbid(unsafe_code)]
 
 pub mod app;
