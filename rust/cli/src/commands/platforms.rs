@@ -4,7 +4,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use super::common::{decode_list, decode_rows, kind, typed};
-use super::{Ctx, leaf, not_yet};
+use super::{Ctx, leaf};
 use crate::cobra::Command;
 use crate::errors::CliError;
 use crate::output::cells::{byte_size, short_id, status_word, text, time_text, unix_time_text};
@@ -31,9 +31,24 @@ pub fn commands() -> Vec<Command> {
             asset_leaf("get <vm>", "Show one VM or container", |ctx| {
                 asset_route(ctx, "proxmox", "details")
             }),
-            not_yet("start <vm>", "Start a VM or container").exact(1),
-            not_yet("stop <vm>", "Stop a VM or container").exact(1),
-            not_yet("restart <vm>", "Restart a VM or container").exact(1),
+            leaf(
+                "start <vm>",
+                "Start a VM or container",
+                super::remote::proxmox_start,
+            )
+            .exact(1),
+            leaf(
+                "stop <vm>",
+                "Stop a VM or container",
+                super::remote::proxmox_stop,
+            )
+            .exact(1),
+            leaf(
+                "restart <vm>",
+                "Restart a VM or container",
+                super::remote::proxmox_restart,
+            )
+            .exact(1),
             leaf("ceph-status", "Show Ceph status", |ctx| {
                 ctx.get_and_print("/api/v2/proxmox/ceph/status")
             }),

@@ -4,6 +4,7 @@ use serde_json::Value;
 
 use super::gofloat::{format_f, format_f_shortest, parse_f64};
 use super::gojson::{self, encode};
+use super::redact;
 
 /// A value the Hub left out or sent as null.
 pub const EMPTY: &str = "-";
@@ -55,7 +56,8 @@ pub fn cell_text(value: Option<&Value>, numbers: Numbers) -> String {
             .filter(|text| text != EMPTY)
             .collect::<Vec<_>>()
             .join(", "),
-        Some(object @ Value::Object(_)) => encode(object, numbers, false),
+        // Printed through a copy with its secrets hidden, as Go since #49.
+        Some(object @ Value::Object(_)) => encode(&redact(object), numbers, false),
     }
 }
 
@@ -179,6 +181,20 @@ mod tests {
         assert_eq!(byte_size(Some(&num("1536"))), "1.5 KiB");
         assert_eq!(byte_size(Some(&num("2.5"))), "2 B");
         assert_eq!(byte_size(Some(&Value::String("n/a".into()))), "n/a");
+    }
+
+    // Fault: a table cell holding an object (a connector's settings, say)
+    // printed its token or password in clear; --json hid it. Go fixed this
+    // in labtether-cli #49.
+    #[test]
+    fn object_cells_hide_secrets() {
+        let value = num(
+            r#"{"url":"https://nas01","auth":{"token":"lt_abc","user":"demo"},"password_set":true}"#,
+        );
+        assert_eq!(
+            text(Some(&value)),
+            r#"{"auth":{"token":"[redacted]","user":"demo"},"password_set":true,"url":"https://nas01"}"#
+        );
     }
 
     // Fault: a remote host could put terminal control characters or line

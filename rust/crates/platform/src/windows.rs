@@ -8,12 +8,17 @@
 //! and frees what Windows allocates before returning.
 #![allow(unsafe_code)]
 
+use std::fs::File;
 use std::io;
 use std::os::windows::ffi::OsStrExt;
+use std::os::windows::io::{FromRawHandle, RawHandle};
 use std::path::Path;
 use std::ptr::{null, null_mut};
 
-use windows_sys::Win32::Foundation::{CloseHandle, ERROR_SUCCESS, GENERIC_ALL, HANDLE, LocalFree};
+use windows_sys::Win32::Foundation::{
+    CloseHandle, ERROR_SUCCESS, GENERIC_ALL, GENERIC_READ, GENERIC_WRITE, HANDLE,
+    INVALID_HANDLE_VALUE, LocalFree,
+};
 use windows_sys::Win32::Security::Authorization::{
     EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, NO_MULTIPLE_TRUSTEE, SE_FILE_OBJECT,
     SetEntriesInAclW, SetNamedSecurityInfoW, TRUSTEE_IS_GROUP, TRUSTEE_IS_SID, TRUSTEE_IS_USER,
@@ -22,10 +27,14 @@ use windows_sys::Win32::Security::Authorization::{
 use windows_sys::Win32::Security::{
     ACCESS_ALLOWED_ACE, ACE_HEADER, ACL, ACL_SIZE_INFORMATION, AclSizeInformation,
     CreateWellKnownSid, DACL_SECURITY_INFORMATION, EqualSid, GetAce, GetAclInformation,
-    GetSecurityDescriptorControl, GetTokenInformation, NO_INHERITANCE,
-    PROTECTED_DACL_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, SE_DACL_PROTECTED, TOKEN_QUERY,
-    TOKEN_USER, TokenUser, WinBuiltinAdministratorsSid, WinLocalSystemSid,
+    GetSecurityDescriptorControl, GetTokenInformation, InitializeSecurityDescriptor,
+    NO_INHERITANCE, PROTECTED_DACL_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, SE_DACL_PROTECTED,
+    SECURITY_ATTRIBUTES, SECURITY_DESCRIPTOR, SetSecurityDescriptorControl,
+    SetSecurityDescriptorDacl, TOKEN_QUERY, TOKEN_USER, TokenUser, WinBuiltinAdministratorsSid,
+    WinLocalSystemSid,
 };
+use windows_sys::Win32::Storage::FileSystem::{CREATE_NEW, CreateFileW, FILE_ATTRIBUTE_NORMAL};
+use windows_sys::Win32::System::SystemServices::SECURITY_DESCRIPTOR_REVISION;
 use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
 
 /// SECURITY_MAX_SID_SIZE: no SID is longer.
@@ -125,8 +134,19 @@ fn entry(sid: &mut [u8], trustee_type: i32) -> EXPLICIT_ACCESS_W {
     }
 }
 
-/// Replaces the file's DACL with the protected three-entry list.
-pub fn protect(path: &Path) -> io::Result<()> {
+/// The protected three-entry ACL, freed when dropped.
+struct PrivateAcl(*mut ACL);
+
+impl Drop for PrivateAcl {
+    fn drop(&mut self) {
+        // SAFETY: the pointer came from SetEntriesInAclW and is freed once.
+        unsafe { LocalFree(self.0.cast()) };
+    }
+}
+
+/// Builds the ACL that grants GENERIC_ALL to the user, LocalSystem and
+/// Administrators, and nothing else.
+fn private_acl() -> io::Result<PrivateAcl> {
     let [mut user, mut system, mut admins] = allowed_sids()?;
     let entries = [
         entry(&mut user, TRUSTEE_IS_USER),
@@ -136,12 +156,19 @@ pub fn protect(path: &Path) -> io::Result<()> {
     let mut acl: *mut ACL = null_mut();
     // SAFETY: `entries` and the SID buffers they point to live until the end
     // of this function; no old ACL is merged (null); `acl` receives a
-    // LocalAlloc'd ACL that is freed below.
+    // LocalAlloc'd ACL that `PrivateAcl` frees. SetEntriesInAclW copies the
+    // SIDs into the ACL, so it does not borrow the buffers.
     let status =
         unsafe { SetEntriesInAclW(entries.len() as u32, entries.as_ptr(), null(), &mut acl) };
     if status != ERROR_SUCCESS {
         return Err(io::Error::from_raw_os_error(status as i32));
     }
+    Ok(PrivateAcl(acl))
+}
+
+/// Replaces the file's DACL with the protected three-entry list.
+pub fn protect(path: &Path) -> io::Result<()> {
+    let acl = private_acl()?;
     let name = wide(path);
     // SAFETY: `name` is NUL-terminated and outlives the call; owner, group
     // and SACL are not changed (null); `acl` is the ACL built above.
@@ -152,16 +179,65 @@ pub fn protect(path: &Path) -> io::Result<()> {
             DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
             null_mut(),
             null_mut(),
-            acl,
+            acl.0,
             null(),
         )
     };
-    // SAFETY: `acl` came from SetEntriesInAclW and is freed once.
-    unsafe { LocalFree(acl.cast()) };
     if status != ERROR_SUCCESS {
         return Err(io::Error::from_raw_os_error(status as i32));
     }
     Ok(())
+}
+
+/// Creates a new file with the protected ACL set at creation, so it never
+/// has the folder's inherited access, and with no sharing, so no other
+/// handle can be opened on it while this one is open.
+pub fn create_private(path: &Path) -> io::Result<File> {
+    let acl = private_acl()?;
+    let mut descriptor = SECURITY_DESCRIPTOR::default();
+    let descriptor_ptr: PSECURITY_DESCRIPTOR = (&mut descriptor as *mut SECURITY_DESCRIPTOR).cast();
+    // SAFETY: `descriptor` is a SECURITY_DESCRIPTOR this function owns and
+    // that outlives every use below.
+    if unsafe { InitializeSecurityDescriptor(descriptor_ptr, SECURITY_DESCRIPTOR_REVISION) } == 0 {
+        return Err(last_error());
+    }
+    // SAFETY: the descriptor is initialised; `acl` lives until the end of
+    // this function, after CreateFileW has copied it to the new file.
+    if unsafe { SetSecurityDescriptorDacl(descriptor_ptr, 1, acl.0, 0) } == 0 {
+        return Err(last_error());
+    }
+    // SAFETY: the descriptor is initialised; only the protected bit is set.
+    if unsafe { SetSecurityDescriptorControl(descriptor_ptr, SE_DACL_PROTECTED, SE_DACL_PROTECTED) }
+        == 0
+    {
+        return Err(last_error());
+    }
+    let attributes = SECURITY_ATTRIBUTES {
+        nLength: size_of::<SECURITY_ATTRIBUTES>() as u32,
+        lpSecurityDescriptor: descriptor_ptr,
+        bInheritHandle: 0,
+    };
+    let name = wide(path);
+    // SAFETY: `name` is NUL-terminated; `attributes` and the descriptor and
+    // ACL it points to live until the call returns; share mode 0 and
+    // CREATE_NEW; no template file.
+    let handle = unsafe {
+        CreateFileW(
+            name.as_ptr(),
+            GENERIC_READ | GENERIC_WRITE,
+            0,
+            &attributes,
+            CREATE_NEW,
+            FILE_ATTRIBUTE_NORMAL,
+            null_mut(),
+        )
+    };
+    if handle == INVALID_HANDLE_VALUE {
+        return Err(last_error());
+    }
+    // SAFETY: `handle` is a valid file handle that nothing else owns; the
+    // File closes it.
+    Ok(unsafe { File::from_raw_handle(handle as RawHandle) })
 }
 
 /// Whether the file's DACL is protected (inherits nothing) and allows only

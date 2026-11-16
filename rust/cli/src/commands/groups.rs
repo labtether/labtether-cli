@@ -4,7 +4,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use super::monitoring::by_id;
-use super::{Ctx, leaf, not_yet};
+use super::{Ctx, leaf};
 use crate::cobra::quote::quote;
 use crate::cobra::{Command, Flag};
 use crate::errors::CliError;
@@ -18,7 +18,7 @@ pub fn commands() -> Vec<Command> {
         Command::new("connectors", "List and test hub connectors").children(vec![
             leaf("list", "List connectors", connectors_list),
             leaf("get <id>", "Show one connector", connectors_get).exact(1),
-            not_yet("test <connector-or-collector-id>", "Test a saved connection")
+            leaf("test <connector-or-collector-id>", "Test a saved connection", super::remote::connectors_test)
                 .long(
                     "Test the saved connection for a connector, such as proxmox or truenas. \
                      When a connector has more than one saved connection, give its collector ID, as shown by collectors list.",
@@ -32,11 +32,11 @@ pub fn commands() -> Vec<Command> {
         Command::new("groups", "List and create device groups").children(vec![
             leaf("list", "List groups", groups_list),
             leaf("get <group>", "Show one group", |ctx| by_id(ctx, "/api/v2/groups/")).exact(1),
-            not_yet("create", "Create a group").flag(Flag::string("name", "", "Group name (required)")),
+            leaf("create", "Create a group", super::actions::groups_create).flag(Flag::string("name", "", "Group name (required)")),
         ]),
         Command::new("web-services", "List and sync the web services the hub found").children(vec![
             leaf("list", "List web services", web_services_list),
-            not_yet("sync", "Start a web services sync"),
+            leaf("sync", "Start a web services sync", super::actions::web_services_sync),
         ]),
         Command::new("ha", "List and control Home Assistant entities").children(vec![
             leaf("entities", "List Home Assistant entities", ha_entities),
@@ -44,7 +44,7 @@ pub fn commands() -> Vec<Command> {
                 by_id(ctx, "/api/v2/homeassistant/entities/")
             })
             .exact(1),
-            not_yet("call <id> <service>", "Call a Home Assistant service, such as switch.turn_on, on an entity").exact(2),
+            leaf("call <id> <service>", "Call a Home Assistant service, such as switch.turn_on, on an entity", super::actions::ha_call).exact(2),
         ]),
         Command::new("map", "Show how devices connect")
             .aliases(&["topology"])

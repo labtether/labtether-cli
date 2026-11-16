@@ -16,8 +16,8 @@ fn env_with_home(home: &str) -> Env {
 }
 
 fn write_config(env: &Env, text: &str) {
-    std::fs::create_dir_all(env.config_dir()).unwrap();
-    std::fs::write(env.config_path(), text).unwrap();
+    std::fs::create_dir_all(env.config_dir().unwrap()).unwrap();
+    std::fs::write(env.config_path().unwrap(), text).unwrap();
 }
 
 #[cfg(unix)]
@@ -134,23 +134,27 @@ fn config_symlink_is_refused_and_config_is_made_private() {
     use std::os::unix::fs::PermissionsExt;
     let home = temp_home("symlink");
     let env = env_with_home(&home);
-    std::fs::create_dir_all(env.config_dir()).unwrap();
+    std::fs::create_dir_all(env.config_dir().unwrap()).unwrap();
     let target = format!("{home}/elsewhere.json");
     write_mode(&target, r#"{"host":"https://x.example"}"#, 0o600);
-    std::os::unix::fs::symlink(&target, env.config_path()).unwrap();
+    std::os::unix::fs::symlink(&target, env.config_path().unwrap()).unwrap();
     let (_, err) = load_config(&env);
     assert_eq!(
         err,
         Some(format!(
             "config {} must be a regular file, not a symlink or device",
-            env.config_path()
+            env.config_path().unwrap()
         ))
     );
-    std::fs::remove_file(env.config_path()).unwrap();
-    write_mode(&env.config_path(), r#"{"host":"https://x.example"}"#, 0o644);
+    std::fs::remove_file(env.config_path().unwrap()).unwrap();
+    write_mode(
+        &env.config_path().unwrap(),
+        r#"{"host":"https://x.example"}"#,
+        0o644,
+    );
     let (config, err) = load_config(&env);
     assert_eq!((config.host.as_str(), err), ("https://x.example", None));
-    let mode = std::fs::metadata(env.config_path())
+    let mode = std::fs::metadata(env.config_path().unwrap())
         .unwrap()
         .permissions()
         .mode()
@@ -167,7 +171,7 @@ fn broken_config_and_environment_follow_go() {
     write_config(&env, r#"{"host":"#);
     let err = resolve(&env, &Flags::default()).unwrap_err();
     assert!(
-        matches!(&err, CliError::Config(m) if m.starts_with(&format!("parse config {}: the file is not a valid config (", env.config_path()))),
+        matches!(&err, CliError::Config(m) if m.starts_with(&format!("parse config {}: the file is not a valid config (", env.config_path().unwrap()))),
         "{err:?}"
     );
     env.host = Some("https://env.example".into());
@@ -186,7 +190,7 @@ fn broken_config_and_environment_follow_go() {
     env.host = None;
     let err = resolve(&env, &Flags::default()).unwrap_err();
     assert!(
-        matches!(&err, CliError::Config(m) if m.starts_with(&format!("parse config {}: the file is not a valid config (", env.config_path()))),
+        matches!(&err, CliError::Config(m) if m.starts_with(&format!("parse config {}: the file is not a valid config (", env.config_path().unwrap()))),
         "{err:?}"
     );
 }
@@ -222,13 +226,13 @@ fn saved_config_is_private_and_go_shaped() {
         tls_ca_file: String::new(),
     };
     save_config(&env, &config).unwrap();
-    let text = std::fs::read_to_string(env.config_path()).unwrap();
+    let text = std::fs::read_to_string(env.config_path().unwrap()).unwrap();
     assert_eq!(
         text,
         "{\n  \"host\": \"https://nas01\",\n  \"api_key\": \"k\\u003c1\\u003e\"\n}"
     );
     assert_eq!(
-        std::fs::metadata(env.config_path())
+        std::fs::metadata(env.config_path().unwrap())
             .unwrap()
             .permissions()
             .mode()

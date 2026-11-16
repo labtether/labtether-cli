@@ -5,7 +5,7 @@ use serde_json::Value;
 use crate::output::gofloat::{format_v, parse_f64};
 
 use super::common::{check_any_map, decode_object, decode_rows, rows, typed};
-use super::{Ctx, leaf, not_yet};
+use super::{Ctx, leaf};
 use crate::cobra::{Command, Flag};
 use crate::errors::CliError;
 use crate::output::cells::{Numbers, cell_text, clean_cell, status_word, text, time_text};
@@ -26,8 +26,8 @@ pub fn commands() -> Vec<Command> {
             leaf("list", "List connected agents", agents_list),
             leaf("get <id>", "Show the device an agent runs on", asset_get).exact(1),
             leaf("pending", "List agents waiting for approval", agents_pending),
-            not_yet("approve <id>", "Approve a pending agent").exact(1),
-            not_yet("reject <id>", "Reject a pending agent").exact(1),
+            leaf("approve <id>", "Approve a pending agent", super::actions::agents_approve).exact(1),
+            leaf("reject <id>", "Reject a pending agent", super::actions::agents_reject).exact(1),
         ]),
         Command::new("hub", "Show hub status and connected agents").children(vec![
             leaf("status", "Show hub status", |ctx| ctx.get_and_print("/api/v2/hub/status")),

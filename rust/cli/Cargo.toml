@@ -1,6 +1,6 @@
 [package]
 name = "labtether-cli-rs"
-description = "The LabTether command-line tool in Rust; read commands only for now"
+description = "The LabTether command-line tool in Rust"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

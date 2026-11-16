@@ -10,7 +10,7 @@ use serde::Serialize;
 use serde_json::ser::{CharEscape, Formatter};
 use serde_json::{Serializer, Value};
 
-use super::gofloat::{format_json, parse_f64};
+use crate::gofloat::{format_json, parse_f64};
 
 /// How numbers are written.
 #[derive(Clone, Copy, PartialEq, Eq)]

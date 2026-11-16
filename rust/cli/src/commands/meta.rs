@@ -1,6 +1,6 @@
 //! Cobra's help and completion commands.
 
-use super::{Ctx, leaf, not_yet};
+use super::{Ctx, complete, leaf};
 use crate::cobra::{Args, Command, Flag, find, help};
 use crate::errors::CliError;
 
@@ -10,11 +10,10 @@ pub fn commands() -> Vec<Command> {
          Simply type labtether-cli help [path to command] for full details.",
     );
     help_command.is_help = true;
-    // The scripts themselves are not in the Rust build yet: they must be
-    // Cobra's exact output, captured from the Go CLI, and they call the
-    // hidden `__complete` command, which is not ported either.
-    let shell = |usage, short, long: &str| {
-        not_yet(usage, short)
+    // Cobra's scripts, and the hidden `__complete` command they call
+    // (`complete.rs`).
+    let shell = |usage, short, long: &str, run: super::Handler| {
+        leaf(usage, short, run)
             .long(long)
             .args(Args::None)
             .flag(Flag::bool(
@@ -26,6 +25,7 @@ pub fn commands() -> Vec<Command> {
         "bash",
         "Generate the autocompletion script for bash",
         BASH_LONG,
+        complete::bash,
     );
     bash.usage_without_flags = true;
     vec![
@@ -45,16 +45,19 @@ pub fn commands() -> Vec<Command> {
                 "zsh",
                 "Generate the autocompletion script for zsh",
                 ZSH_LONG,
+                complete::zsh,
             ),
             shell(
                 "fish",
                 "Generate the autocompletion script for fish",
                 FISH_LONG,
+                complete::fish,
             ),
             shell(
                 "powershell",
                 "Generate the autocompletion script for powershell",
                 POWERSHELL_LONG,
+                complete::powershell,
             ),
         ]),
     ]

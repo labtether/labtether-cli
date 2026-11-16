@@ -4,9 +4,8 @@ All notable changes to the LabTether CLI.
 
 ## Unreleased
 
-- A Rust build of the CLI is in `rust/`. It is not released. It runs the
-  commands that only read from the hub, plus `config`, and refuses every
-  other command; see `rust/README.md`.
+- A Rust build of the CLI is in `rust/`. It is not released. It runs every
+  command the Go CLI has, shell completion included; see `rust/README.md`.
 
 ### Fixes
 

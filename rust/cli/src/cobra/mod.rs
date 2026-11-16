@@ -16,6 +16,8 @@ pub enum Args {
     /// when it is found.
     Legacy,
     Exact(usize),
+    /// Cobra's `MinimumNArgs`.
+    Minimum(usize),
     None,
     Arbitrary,
 }
@@ -127,6 +129,9 @@ pub struct Command {
     pub version: Option<String>,
     /// Cobra's `DisableFlagsInUseLine`.
     pub usage_without_flags: bool,
+    /// Cobra's `DisableFlagParsing`: the command gets every argument as
+    /// it was typed.
+    pub disable_flag_parsing: bool,
     pub children: Vec<Command>,
 }
 
@@ -146,6 +151,7 @@ impl Command {
             is_help: false,
             version: None,
             usage_without_flags: false,
+            disable_flag_parsing: false,
             children: Vec::new(),
         }
     }

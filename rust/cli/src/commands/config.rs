@@ -89,6 +89,14 @@ fn read_api_key(ctx: &mut Ctx) -> Result<String, CliError> {
 
 fn set_key(ctx: &mut Ctx) -> Result<(), CliError> {
     let mut config = loaded(ctx)?;
+    // Refused before the key is asked for: it could not be saved. (The Go
+    // CLI's fix asks for the key first, then refuses.)
+    if ctx.env.config_dir().is_none() {
+        return Err(CliError::Config(format!(
+            "save config: {}",
+            crate::settings::no_home_folder()
+        )));
+    }
     config.api_key = Some(Secret::new(read_api_key(ctx)?));
     save(ctx, &config)?;
     status(
@@ -115,6 +123,9 @@ fn set_ca(ctx: &mut Ctx) -> Result<(), CliError> {
 }
 
 fn show(ctx: &mut Ctx) -> Result<(), CliError> {
+    let Some(path) = ctx.env.config_path() else {
+        return Err(CliError::Config(crate::settings::no_home_folder()));
+    };
     let config = loaded(ctx)?;
     let key = if config
         .api_key
@@ -125,7 +136,6 @@ fn show(ctx: &mut Ctx) -> Result<(), CliError> {
     } else {
         "(not set)"
     };
-    let path = ctx.env.config_path();
     if ctx.json {
         ctx.out.print_json(&object(&[
             ("host", string(&config.host)),

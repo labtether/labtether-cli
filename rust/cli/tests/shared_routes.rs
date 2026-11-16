@@ -1,7 +1,6 @@
 //! The shared command-to-route table (testdata/hub-routes.json), which the
 //! Go CLI's tests read too. Every runnable command of the Rust tree must be
-//! in it; every in-scope command must send the listed request; every
-//! command not in the Rust build yet must refuse without a request.
+//! in it, and every command must send the listed request.
 
 mod common;
 
@@ -57,7 +56,7 @@ fn every_command_matches_the_shared_route_table() {
     let root = root();
     let home = temp_home("routes");
     let mut covered = Vec::new();
-    let (mut checked, mut refused) = (0, 0);
+    let mut checked = 0;
     for case in list(&table, "routes") {
         let name = case.get("name").and_then(Value::as_str).unwrap();
         let args = strings(case.get("args").unwrap());
@@ -89,19 +88,6 @@ fn every_command_matches_the_shared_route_table() {
                 );
                 checked += 1;
             }
-            Some(Run::NotYet) => {
-                assert_ne!(result.code, 0, "{name}");
-                assert!(
-                    result.stderr.contains("is not in the Rust build yet"),
-                    "{name}: {}",
-                    result.stderr
-                );
-                assert!(
-                    requests.is_empty(),
-                    "{name}: refused command sent {requests:?}"
-                );
-                refused += 1;
-            }
             None => panic!("{name}: not runnable"),
         }
     }
@@ -114,10 +100,7 @@ fn every_command_matches_the_shared_route_table() {
             "command {name:?} has no case in testdata/hub-routes.json"
         );
     }
-    println!(
-        "route cases: {checked} in the Rust build, {refused} not yet; runnable commands: {}",
-        all.len()
-    );
+    println!("route cases: {checked}; runnable commands: {}", all.len());
 }
 
 // Fault: a table command rejected a list shape the Hub sends (empty or

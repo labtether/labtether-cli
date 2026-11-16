@@ -4,6 +4,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::error::ClientError;
+use crate::redact::unreadable_answer_text;
 
 /// The envelope fields the Go CLI's `V2Response` declares. A field with the
 /// wrong type makes the answer unreadable, as in Go.
@@ -29,12 +30,9 @@ struct Meta {
 /// <code>: <body>" for a body that is not a readable envelope, and
 /// "<message> (status <code>)" for an error status, as the Go CLI says.
 pub fn decode(status: u16, body: &[u8]) -> Result<Value, ClientError> {
-    let unreadable = || {
-        ClientError::Failed(format!(
-            "status {status}: {}",
-            String::from_utf8_lossy(body)
-        ))
-    };
+    // Not an envelope: the answer is shown with its secrets hidden.
+    let unreadable =
+        || ClientError::Failed(format!("status {status}: {}", unreadable_answer_text(body)));
     let top: Value = serde_json::from_slice(body).map_err(|_| unreadable())?;
     let envelope = match &top {
         Value::Null => None,
@@ -62,6 +60,29 @@ pub fn decode(status: u16, body: &[u8]) -> Result<Value, ClientError> {
         Some(data) => data.clone(),
         None => top,
     })
+}
+
+/// The Go CLI's `Download` error for a status outside 200-299: the Hub's
+/// message (or error) when the body is a readable envelope that has one,
+/// else "request failed". Either way " (status N)" follows.
+pub fn download_error(status: u16, body: &[u8]) -> ClientError {
+    let message = serde_json::from_slice::<Value>(body)
+        .ok()
+        .and_then(|top| match &top {
+            Value::Object(_) => Envelope::deserialize(&top).ok(),
+            _ => None,
+        })
+        .and_then(|envelope| {
+            envelope
+                .message
+                .filter(|m| !m.is_empty())
+                .or(envelope.error)
+        })
+        .filter(|m| !m.is_empty());
+    ClientError::Status {
+        status,
+        message: message.unwrap_or_else(|| "request failed".to_string()),
+    }
 }
 
 #[cfg(test)]
@@ -107,6 +128,40 @@ mod tests {
             r#"status 200: {"status":"x","data":1}"#
         );
         assert!(decode(200, b"[1]").is_err());
+    }
+
+    fn text(body: &[u8]) -> String {
+        decode(200, body).unwrap_err().to_string()["status 200: ".len()..].to_string()
+    }
+
+    // Fault: an answer the CLI could not read as its envelope (a proxy page,
+    // or a field of the wrong type) was echoed raw in the error text, secrets
+    // included. labtether-cli #49 fixed this in Go; the words and bytes here
+    // are Go's.
+    #[test]
+    fn unreadable_answers_hide_secrets() {
+        assert_eq!(
+            text(b"<html>bad gateway</html>"),
+            "<html>bad gateway</html>"
+        );
+        assert_eq!(
+            text(b"<p>Token: lt_abc</p>"),
+            "the answer is not valid JSON and names a secret field, so its 20 bytes are not shown"
+        );
+        assert_eq!(
+            text(br#"{"status":"x", "data":1}"#),
+            r#"{"status":"x", "data":1}"#
+        );
+        assert_eq!(
+            text(br#"{"status":"x","data":{"api_key":"lt_abc","n":1.50,"h":"<b>"}}"#),
+            r#"{"data":{"api_key":"[redacted]","h":"\u003cb\u003e","n":1.5},"status":"x"}"#
+        );
+        // A number beyond float64: every number keeps its text, as Go
+        // (serde_json spells the exponent "1e+400" where Go keeps "1e400").
+        assert_eq!(
+            text(br#"[{"password":"p","n":1e400,"m":2.50}]"#),
+            r#"[{"m":2.50,"n":1e+400,"password":"[redacted]"}]"#
+        );
     }
 
     // Fault: `"data": null` must stay null, and a missing data member gives
