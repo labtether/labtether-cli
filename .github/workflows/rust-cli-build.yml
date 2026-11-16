@@ -1,0 +1,141 @@
+name: Rust CLI build
+
+# Builds labtether-cli-rs for the six targets the Go CLI ships, runs each
+# binary once, writes SHA256SUMS and a build attestation per binary, and keeps
+# them as workflow artifacts for a few days. It publishes nothing: no tag, no
+# GitHub release, no package and no project signing key. See rust/RELEASING.md.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit to build
+        required: true
+        default: main
+      version:
+        description: Version the binaries report (letters, digits and . _ + -)
+        required: true
+        default: dev
+  # The pull request that changes this build runs it once as its proof.
+  pull_request:
+    paths:
+      - .github/workflows/rust-cli-build.yml
+      - scripts/release/build-rust-cli.sh
+
+permissions: {}
+
+concurrency:
+  group: rust-cli-build-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  # One native runner per target. ring (the TLS crypto) compiles C for its
+  # target, so macOS and Windows builds need their own SDKs; native runners
+  # also let each binary run on its own OS before it is attested. The Intel
+  # macOS build is made on the arm64 macOS runner (same SDK) and runs there
+  # under Rosetta 2, as Intel macOS runners are being retired.
+  build:
+    name: Build ${{ matrix.asset }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, target: x86_64-unknown-linux-musl, asset: labtether-cli-rs-linux-amd64 }
+          - { runner: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl, asset: labtether-cli-rs-linux-arm64 }
+          - { runner: macos-26, target: x86_64-apple-darwin, asset: labtether-cli-rs-darwin-amd64, smoke-prefix: "arch -x86_64" }
+          - { runner: macos-26, target: aarch64-apple-darwin, asset: labtether-cli-rs-darwin-arm64 }
+          - { runner: windows-2025-vs2026, target: x86_64-pc-windows-msvc, asset: labtether-cli-rs-windows-amd64.exe }
+          - { runner: windows-11-arm, target: aarch64-pc-windows-msvc, asset: labtether-cli-rs-windows-arm64.exe }
+    env:
+      TARGET: ${{ matrix.target }}
+      ASSET: ${{ matrix.asset }}
+      VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || 'dev' }}
+      SMOKE_PREFIX: ${{ matrix.smoke-prefix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
+          persist-credentials: false
+
+      # Linux builds link musl statically, as the Go CLI needs no libc.
+      - name: Install the musl C compiler
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq musl-tools
+
+      - name: Install Rosetta 2 for the Intel smoke run
+        if: matrix.target == 'x86_64-apple-darwin'
+        run: /usr/bin/pgrep -q oahd || sudo softwareupdate --install-rosetta --agree-to-license
+
+      # No build cache: each attested binary comes from a clean build.
+      - name: Build and run ${{ matrix.asset }}
+        shell: bash
+        run: scripts/release/build-rust-cli.sh "${TARGET}" "${ASSET}" "${VERSION}" "${RUNNER_TEMP}/out"
+
+      - name: Attest the binary
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/out/${{ matrix.asset }}
+
+      - name: Keep the attestation bundle with the binary
+        shell: bash
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: cp "${BUNDLE}" "${RUNNER_TEMP}/out/${ASSET}.sigstore.json"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rust-cli-${{ matrix.asset }}
+          path: ${{ runner.temp }}/out/
+          if-no-files-found: error
+          retention-days: 5
+
+  # SHA256SUMS in the Go release's format: sha256sum output for every
+  # binary, sorted by name.
+  checksums:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: rust-cli-*
+          path: dist
+          merge-multiple: true
+
+      - name: Check every target and write SHA256SUMS
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          expected=()
+          for target in linux-amd64 linux-arm64 darwin-amd64 darwin-arm64 windows-amd64.exe windows-arm64.exe; do
+            expected+=("labtether-cli-rs-${target}")
+          done
+          for file in "${expected[@]}"; do
+            test -s "${file}" || { echo "missing ${file}" >&2; exit 1; }
+            test -s "${file}.sigstore.json" || { echo "missing attestation for ${file}" >&2; exit 1; }
+          done
+          actual="$(find . -maxdepth 1 -type f | wc -l)"
+          if [[ "${actual}" -ne $(( 2 * ${#expected[@]} )) ]]; then
+            echo "expected $(( 2 * ${#expected[@]} )) files, found ${actual}" >&2
+            ls -la >&2
+            exit 1
+          fi
+          printf '%s\n' "${expected[@]}" | LC_ALL=C sort | xargs sha256sum > SHA256SUMS
+          cat SHA256SUMS
+          { echo '```'; cat SHA256SUMS; echo '```'; } >> "${GITHUB_STEP_SUMMARY}"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rust-cli-SHA256SUMS
+          path: dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 5
