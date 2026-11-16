@@ -8,6 +8,27 @@ All notable changes to the LabTether CLI.
   commands that only read from the hub, plus `config`, and refuses every
   other command; see `rust/README.md`.
 
+### Fixes
+
+- `--json` hides `password`, `secret`, `token`, `api_key` and `private_key`
+  values in every answer. Before, an answer holding a number too large for
+  the CLI to read was printed as it came, secrets included. Error text that
+  shows an unreadable answer, and table cells that hold an object, now hide
+  them too.
+- The exit code comes from the Hub's HTTP status only. Before, a Hub message
+  containing text such as "(status 404)" could change it. Exit codes for the
+  Hub's answers are unchanged: 2 for 401 and 403, 3 for 404 and 409, 1 for
+  other errors.
+- With no home folder, the CLI no longer reads or saves settings in the
+  system temporary folder, where another user of the same machine could have
+  put a config file. Set `HOME` (`USERPROFILE` on Windows), or set
+  `LABTETHER_HOST` and `LABTETHER_API_KEY`. Without a home folder,
+  `config show` and the `config set-*` commands exit 4 with that message.
+- On Windows, the temporary copy of the config file is private from the
+  moment it is made. Before, for a moment it had the folder's inherited
+  access, and a program that opened it then could read the API key written
+  into it.
+
 ## v2.0.1
 
 No change to the CLI since v2.0.0. It is released again so that every part of

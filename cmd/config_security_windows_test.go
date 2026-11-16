@@ -3,6 +3,8 @@
 package cmd
 
 import (
+	"io"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -37,4 +39,38 @@ func assertConfigProtection(t *testing.T, path string) {
 		}
 		delete(allowed, fields[5])
 	}
+}
+
+// Fault: the config's temporary copy was created with the folder's inherited
+// access and protected only afterwards. A handle opened in that moment keeps
+// the access it was opened with, so it could read the API key written next.
+func TestSaveConfigTempFileIsPrivateFromCreation(t *testing.T) {
+	isolateConfig(t)
+	var early *os.File
+	checked := false
+	previous := configTempCreated
+	configTempCreated = func(path string) {
+		checked = true
+		assertConfigProtection(t, path)
+		if file, err := os.Open(path); err == nil {
+			early = file
+		}
+	}
+	t.Cleanup(func() {
+		configTempCreated = previous
+		if early != nil {
+			_ = early.Close()
+		}
+	})
+	if err := saveConfig(config{Host: "https://hub.example.com", APIKey: "key-in-temp-copy"}); err != nil {
+		t.Fatalf("save config: %v", err)
+	}
+	if !checked {
+		t.Fatal("the temporary copy was never checked")
+	}
+	if early != nil {
+		data, _ := io.ReadAll(early)
+		t.Fatalf("a second handle was opened on the temporary copy and read %d bytes", len(data))
+	}
+	assertConfigProtection(t, configPath())
 }

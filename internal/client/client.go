@@ -13,6 +13,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/labtether/labtether-cli/internal/redact"
 )
 
 const maxResponseBodyBytes int64 = 16 * 1024 * 1024
@@ -163,6 +165,40 @@ type V2Meta struct {
 	PerPage int `json:"per_page"`
 }
 
+// StatusError is an error status from the Hub with the Hub's message. The
+// CLI picks its exit code from Status, never from the message words.
+type StatusError struct {
+	Status  int
+	Message string
+}
+
+func (e *StatusError) Error() string {
+	return fmt.Sprintf("%s (status %d)", e.Message, e.Status)
+}
+
+// unreadableAnswerText is an answer that is not a v2 envelope, as error
+// text. Text that is not JSON, such as a proxy's error page, is shown as it
+// came unless it names a secret field. JSON is shown as it came when it has
+// no secret value, and otherwise re-encoded with its secrets hidden.
+func unreadableAnswerText(body []byte) string {
+	decoded, err := redact.Decode(body)
+	if err != nil {
+		if redact.MentionsSecret(string(body)) {
+			return fmt.Sprintf("the answer is not valid JSON and names a secret field, so its %d bytes are not shown", len(body))
+		}
+		return string(body)
+	}
+	redacted, hidden := redact.Value(decoded)
+	if hidden == 0 {
+		return string(body)
+	}
+	text, err := json.Marshal(redacted)
+	if err != nil {
+		return fmt.Sprintf("the answer holds a secret and could not be shown (%d bytes)", len(body))
+	}
+	return string(text)
+}
+
 func (c *Client) do(method, path string, body any) (*V2Response, error) {
 	if err := ValidateBaseURL(c.BaseURL); err != nil {
 		return nil, err
@@ -201,8 +237,8 @@ func (c *Client) do(method, path string, body any) (*V2Response, error) {
 
 	var v2resp V2Response
 	if err := json.Unmarshal(respBody, &v2resp); err != nil {
-		// Non-JSON response
-		return nil, fmt.Errorf("status %d: %s", resp.StatusCode, string(respBody))
+		// Not a v2 envelope. The answer is shown, with its secrets hidden.
+		return nil, fmt.Errorf("status %d: %s", resp.StatusCode, unreadableAnswerText(respBody))
 	}
 
 	if resp.StatusCode >= 400 {
@@ -210,7 +246,7 @@ func (c *Client) do(method, path string, body any) (*V2Response, error) {
 		if msg == "" {
 			msg = v2resp.Error
 		}
-		return &v2resp, fmt.Errorf("%s (status %d)", msg, resp.StatusCode)
+		return &v2resp, &StatusError{Status: resp.StatusCode, Message: msg}
 	}
 	// A few v2 routes, such as /api/v2/metrics/overview, answer with the
 	// payload itself instead of a data envelope. Use the whole body then.
@@ -262,10 +298,10 @@ func (c *Client) Download(path string, dst io.Writer) error {
 				message = v2resp.Error
 			}
 			if message != "" {
-				return fmt.Errorf("%s (status %d)", message, resp.StatusCode)
+				return &StatusError{Status: resp.StatusCode, Message: message}
 			}
 		}
-		return fmt.Errorf("request failed (status %d)", resp.StatusCode)
+		return &StatusError{Status: resp.StatusCode, Message: "request failed"}
 	}
 	if resp.ContentLength > maxFileDownloadBytes {
 		return fmt.Errorf("response exceeds %d byte limit", maxFileDownloadBytes)
