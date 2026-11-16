@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/labtether/labtether-cli/internal/client"
+	"github.com/labtether/labtether-cli/internal/redact"
 )
 
 var (
@@ -24,6 +25,9 @@ var (
 	cfgTLSCAFile  string
 	jsonOutput    bool
 	configHomeDir = os.UserHomeDir
+	// configTempCreated runs as soon as the config's temporary copy exists.
+	// Tests use it to check the copy's access in that moment.
+	configTempCreated = func(string) {}
 )
 
 // Hub package actions can run for 10 minutes; Proxmox tasks can exceed five.
@@ -210,21 +214,39 @@ func readProtectedSecretFile(path string) (string, error) {
 	return secret, nil
 }
 
+// configDir is the per-user settings folder, or "" when there is no home
+// folder. There is no fallback folder: a shared one such as the system
+// temporary folder could hold a config another user put there.
 func configDir() string {
 	home, err := configHomeDir()
 	if err != nil || home == "" {
-		return filepath.Join(os.TempDir(), "labtether")
+		return ""
 	}
 	return filepath.Join(home, ".config", "labtether")
 }
 
 func configPath() string {
-	return filepath.Join(configDir(), "config.json")
+	dir := configDir()
+	if dir == "" {
+		return ""
+	}
+	return filepath.Join(dir, "config.json")
+}
+
+func errNoHomeFolder() error {
+	name := "HOME"
+	if runtime.GOOS == "windows" {
+		name = "USERPROFILE"
+	}
+	return fmt.Errorf("no home folder to keep settings in; set %s, or set LABTETHER_HOST and LABTETHER_API_KEY", name)
 }
 
 func loadConfig() (config, error) {
 	var cfg config
 	path := configPath()
+	if path == "" {
+		return cfg, nil
+	}
 	info, err := os.Lstat(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -258,6 +280,9 @@ func loadConfig() (config, error) {
 
 func saveConfig(cfg config) error {
 	dir := configDir()
+	if dir == "" {
+		return errNoHomeFolder()
+	}
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
@@ -265,16 +290,14 @@ func saveConfig(cfg config) error {
 	if err != nil {
 		return fmt.Errorf("encode config: %w", err)
 	}
-	tmp, err := os.CreateTemp(dir, ".config-*.tmp")
+	// The copy is private from the moment it exists; see createConfigTemp.
+	tmp, err := createConfigTemp(dir)
 	if err != nil {
 		return err
 	}
 	tmpPath := tmp.Name()
 	defer os.Remove(tmpPath)
-	if err := hardenConfigFile(tmpPath); err != nil {
-		_ = tmp.Close()
-		return err
-	}
+	configTempCreated(tmpPath)
 	if _, err := tmp.Write(data); err != nil {
 		_ = tmp.Close()
 		return err
@@ -303,68 +326,27 @@ func writeJSON(w io.Writer, v any) {
 	_ = encoder.Encode(redactSensitiveJSON(v))
 }
 
+// redactSensitiveJSON is v as it will be printed: decoded, with every secret
+// value replaced. It never returns the raw input, so a value that cannot be
+// read as JSON is printed as an error object instead.
 func redactSensitiveJSON(v any) any {
-	var decoded any
-	switch value := v.(type) {
-	case json.RawMessage:
-		if err := json.Unmarshal(value, &decoded); err != nil {
-			return v
-		}
-	default:
-		data, err := json.Marshal(value)
+	data, ok := v.(json.RawMessage)
+	if !ok {
+		encoded, err := json.Marshal(v)
 		if err != nil {
-			return v
+			return unreadableJSON
 		}
-		if err := json.Unmarshal(data, &decoded); err != nil {
-			return v
-		}
+		data = encoded
 	}
-	return redactDecodedJSON(decoded)
+	decoded, err := redact.Decode(data)
+	if err != nil {
+		return unreadableJSON
+	}
+	redacted, _ := redact.Value(decoded)
+	return redacted
 }
 
-func redactDecodedJSON(v any) any {
-	switch value := v.(type) {
-	case map[string]any:
-		for key, child := range value {
-			if isSensitiveJSONKey(key) && !isSafeSecretStatus(child) {
-				value[key] = "[redacted]"
-				continue
-			}
-			value[key] = redactDecodedJSON(child)
-		}
-		return value
-	case []any:
-		for i, child := range value {
-			value[i] = redactDecodedJSON(child)
-		}
-		return value
-	default:
-		return value
-	}
-}
-
-func isSensitiveJSONKey(key string) bool {
-	normalized := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(key, "-", "_"), " ", "_"))
-	if strings.Contains(normalized, "password") ||
-		strings.Contains(normalized, "secret") ||
-		strings.Contains(normalized, "token") ||
-		strings.Contains(normalized, "api_key") ||
-		strings.Contains(normalized, "private_key") {
-		return true
-	}
-	return normalized == "apikey"
-}
-
-func isSafeSecretStatus(v any) bool {
-	switch value := v.(type) {
-	case string:
-		return value == "(set)" || value == "(not set)" || value == "[redacted]"
-	case bool:
-		return true
-	default:
-		return false
-	}
-}
+var unreadableJSON = map[string]string{"error": "the answer could not be read as JSON"}
 
 func printError(err error) {
 	fmt.Fprintf(os.Stderr, "Error: %v\n", err)

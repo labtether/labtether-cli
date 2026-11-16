@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"errors"
-	"strings"
+	"net/http"
+
+	"github.com/labtether/labtether-cli/internal/client"
 )
 
 // Exit codes, as listed in the CLI guide.
@@ -52,13 +54,15 @@ func exitCodeFor(err error) int {
 	if errors.As(err, &missing) {
 		return exitNotFound
 	}
-	text := err.Error()
-	switch {
-	case strings.Contains(text, "(status 401)") || strings.Contains(text, "(status 403)"):
-		return exitAuth
-	case strings.Contains(text, "(status 409)") || strings.Contains(text, "(status 404)"):
-		return exitNotFound
-	default:
-		return exitFailed
+	// The Hub's status picks the code. Its message words do not.
+	var status *client.StatusError
+	if errors.As(err, &status) {
+		switch status.Status {
+		case http.StatusUnauthorized, http.StatusForbidden:
+			return exitAuth
+		case http.StatusNotFound, http.StatusConflict:
+			return exitNotFound
+		}
 	}
+	return exitFailed
 }

@@ -13,6 +13,7 @@ import (
 	"unicode"
 
 	"github.com/labtether/labtether-cli/internal/client"
+	"github.com/labtether/labtether-cli/internal/redact"
 )
 
 // emptyCell marks a value the Hub left out or sent as null.
@@ -74,13 +75,18 @@ func decodeTableRows(resp *client.V2Response, field string) ([]map[string]any, e
 }
 
 func decodeRows(raw json.RawMessage) ([]map[string]any, error) {
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.UseNumber()
 	var rows []map[string]any
-	if err := decoder.Decode(&rows); err != nil {
+	if err := decodeExact(raw, &rows); err != nil {
 		return nil, err
 	}
 	return rows, nil
+}
+
+// decodeExact decodes JSON with each number's text kept.
+func decodeExact(raw []byte, dst any) error {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	return decoder.Decode(dst)
 }
 
 func printTable(rows []map[string]any, columns ...tableColumn) {
@@ -165,9 +171,19 @@ func cellText(value any) string {
 		}
 		return strings.Join(parts, ", ")
 	case map[string]any:
+		// Printed through a copy with its secrets hidden; the row is unchanged.
 		data, err := json.Marshal(v)
 		if err != nil {
 			return emptyCell
+		}
+		var copied any
+		if err := decodeExact(data, &copied); err != nil {
+			return emptyCell
+		}
+		if redacted, hidden := redact.Value(copied); hidden > 0 {
+			if data, err = json.Marshal(redacted); err != nil {
+				return emptyCell
+			}
 		}
 		return string(data)
 	default:

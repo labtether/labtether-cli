@@ -114,6 +114,9 @@ var configShowCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Show the saved settings",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if configPath() == "" {
+			return asConfigError(errNoHomeFolder())
+		}
 		cfg, err := loadConfig()
 		if err != nil {
 			return asConfigError(err)
